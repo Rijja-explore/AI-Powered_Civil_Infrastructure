@@ -1,15 +1,33 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, Activity, BarChart3, Leaf, AlertTriangle, Download, Play, XCircle, Loader, TrendingUp, Droplet, Wind, Zap, CheckCircle, PieChart, Target } from 'lucide-react';
+import { Bar } from '@ant-design/plots';
+import { useAnalysis } from '../contexts/AnalysisContext';
+import { Camera, Upload, Play, Loader, PieChart, Target, Activity, TrendingUp, CheckCircle, AlertTriangle, BarChart3, Wind, Droplet, Zap, Leaf, Download } from 'lucide-react';
 
 const ImageAnalysis = () => {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
+  const [file, setFile] = useState(() => {
+    // Restore file info from sessionStorage
+    const savedFile = sessionStorage.getItem('uploadedFile');
+    return savedFile ? JSON.parse(savedFile) : null;
+  });
+  const [preview, setPreview] = useState(() => {
+    // Restore preview from sessionStorage
+    return sessionStorage.getItem('uploadedPreview') || null;
+  });
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState(null);
+  const [results, setResults] = useState(() => {
+    // Restore results from sessionStorage
+    const savedResults = sessionStorage.getItem('analysisResults');
+    return savedResults ? JSON.parse(savedResults) : null;
+  });
   const [error, setError] = useState(null);
-  const [outputImages, setOutputImages] = useState(null);
+  const [outputImages, setOutputImages] = useState(() => {
+    // Restore output images from sessionStorage
+    const savedImages = sessionStorage.getItem('outputImages');
+    return savedImages ? JSON.parse(savedImages) : null;
+  });
   const fileInputRef = useRef(null);
+  const { updateAnalysis } = useAnalysis();
   
   const [settings, setSettings] = useState({
     confidenceThreshold: 0.3,
@@ -22,9 +40,25 @@ const ImageAnalysis = () => {
     const selectedFile = event.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
+      
+      // Save file info to sessionStorage (without the actual File object)
+      const fileInfo = {
+        name: selectedFile.name,
+        size: selectedFile.size,
+        type: selectedFile.type,
+        lastModified: selectedFile.lastModified
+      };
+      sessionStorage.setItem('uploadedFile', JSON.stringify(fileInfo));
+      
       const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result);
+      reader.onloadend = () => {
+        setPreview(reader.result);
+        // Save preview to sessionStorage
+        sessionStorage.setItem('uploadedPreview', reader.result);
+      };
       reader.readAsDataURL(selectedFile);
+      
+      // Clear previous results but don't remove from sessionStorage yet
       setResults(null);
       setOutputImages(null);
       setError(null);
@@ -76,6 +110,12 @@ const ImageAnalysis = () => {
       const data = await response.json();
       setResults(data.results);
       setOutputImages(data.output_images);
+      
+      // Save results and images to sessionStorage for persistence
+      sessionStorage.setItem('analysisResults', JSON.stringify(data.results));
+      sessionStorage.setItem('outputImages', JSON.stringify(data.output_images));
+      
+      updateAnalysis(data.results); // Store in context for persistence
       setProgress(100);
       setLoading(false);
     } catch (err) {
@@ -140,16 +180,73 @@ const ImageAnalysis = () => {
     return <span className={`badge bg-${colors[severity] || 'secondary'}`}>{severity}</span>;
   };
 
-  // Dynamic Material Confidence Chart Component
+  // Material Confidence Chart Component
   const MaterialConfidenceChart = ({ materialData }) => {
     if (!materialData || !materialData.probabilities) return null;
 
     const materials = Object.keys(materialData.probabilities);
     const probabilities = Object.values(materialData.probabilities);
 
-    // Create a radial confidence chart
-    const maxProb = Math.max(...probabilities);
-    const primaryMaterial = materials[probabilities.indexOf(maxProb)];
+    // Define colors for different materials
+    const materialColors = {
+      'concrete': '#60a5fa',
+      'steel': '#ef4444',
+      'brick': '#f59e0b',
+      'wood': '#10b981',
+      'glass': '#8b5cf6',
+      'stone': '#6b7280',
+      'asphalt': '#374151',
+      'plastic': '#ec4899'
+    };
+
+    // Prepare data for bar chart with null checks
+    const chartData = materials
+      .filter(material => material && typeof material === 'string') // Filter out null/undefined materials
+      .map((material, index) => ({
+        material: material.charAt(0).toUpperCase() + material.slice(1), // Capitalize first letter
+        confidence: probabilities[index] * 100,
+        color: materialColors[material.toLowerCase()] || '#60a5fa'
+      }));
+
+    // If no valid data, don't render the chart
+    if (chartData.length === 0) return null;
+
+    const config = {
+      data: chartData,
+      xField: 'material',
+      yField: 'confidence',
+      colorField: 'material',
+      color: ({ material }) => {
+        if (!material || typeof material !== 'string') return '#60a5fa';
+        return materialColors[material.toLowerCase()] || '#60a5fa';
+      },
+      label: {
+        position: 'middle',
+        style: {
+          fill: '#FFFFFF',
+          opacity: 0.8,
+          fontSize: 12,
+          fontWeight: 500
+        }
+      },
+      xAxis: {
+        label: {
+          style: {
+            fill: '#64748b',
+            fontSize: 12
+          }
+        }
+      },
+      yAxis: {
+        label: {
+          formatter: (v) => `${v}%`,
+          style: {
+            fill: '#64748b',
+            fontSize: 12
+          }
+        }
+      }
+    };
 
     return (
       <div className="material-confidence-chart" style={{ marginTop: '2rem' }}>
@@ -157,76 +254,7 @@ const ImageAnalysis = () => {
           <Target size={18} />
           Material Confidence Analysis
         </h6>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div className="confidence-overview" style={{
-            padding: '1.5rem',
-            background: 'linear-gradient(135deg, var(--primary-light), var(--primary))',
-            borderRadius: 'var(--border-radius)',
-            color: 'white',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-              {(maxProb * 100).toFixed(1)}%
-            </div>
-            <div style={{ fontSize: '1.1rem', opacity: 0.9 }}>
-              {primaryMaterial} Confidence
-            </div>
-            <div style={{ fontSize: '0.875rem', opacity: 0.7, marginTop: '0.5rem' }}>
-              Primary Material Detected
-            </div>
-          </div>
-
-          <div className="confidence-breakdown">
-            {materials.map((material, index) => {
-              const prob = probabilities[index];
-              const isPrimary = prob === maxProb;
-              const percentage = (prob * 100).toFixed(1);
-
-              return (
-                <div key={material} className="confidence-item" style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '1rem',
-                  background: isPrimary ? 'var(--primary-light)' : 'var(--light)',
-                  borderRadius: 'var(--border-radius)',
-                  border: `2px solid ${isPrimary ? 'var(--primary)' : 'var(--glass-border)'}`
-                }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{
-                      fontWeight: isPrimary ? 'bold' : 'normal',
-                      color: isPrimary ? 'var(--primary)' : 'var(--dark)',
-                      marginBottom: '0.25rem'
-                    }}>
-                      {material}
-                      {isPrimary && <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>⭐ Primary</span>}
-                    </div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--secondary)' }}>
-                      {percentage}% confidence
-                    </div>
-                  </div>
-                  <div className="confidence-bar" style={{
-                    width: '120px',
-                    height: '8px',
-                    background: 'rgba(0,0,0,0.1)',
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                    marginLeft: '1rem'
-                  }}>
-                    <div style={{
-                      width: `${percentage}%`,
-                      height: '100%',
-                      background: isPrimary ?
-                        'linear-gradient(90deg, var(--primary), var(--primary-dark))' :
-                        'linear-gradient(90deg, var(--secondary), var(--primary-light))',
-                      borderRadius: '4px',
-                      transition: 'width 1s ease-out'
-                    }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <Bar {...config} />
       </div>
     );
   };
@@ -350,17 +378,6 @@ const ImageAnalysis = () => {
                 <Play size={20} style={{ marginRight: '0.5rem' }} />
                 Start Analysis
               </button>
-              <button 
-                className="btn btn-secondary"
-                onClick={() => {
-                  setFile(null);
-                  setPreview(null);
-                  setError(null);
-                }}
-              >
-                <XCircle size={18} style={{ marginRight: '0.5rem' }} />
-                Remove Image
-              </button>
             </div>
           </div>
         </div>
@@ -397,7 +414,12 @@ const ImageAnalysis = () => {
                 </p>
               </div>
               <div className="card-body">
-                <div className="image-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+                <div className="image-grid" style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(3, 1fr)', 
+                  gap: '1.5rem',
+                  marginBottom: '1.5rem'
+                }}>
                   {outputImages.original && (
                     <div className="image-card" style={{ padding: '1rem', background: 'var(--light)', borderRadius: 'var(--border-radius)', border: '1px solid var(--glass-border)' }}>
                       <div className="image-card-title" style={{ fontWeight: 600, marginBottom: '1rem', color: 'var(--dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -428,6 +450,16 @@ const ImageAnalysis = () => {
                       <img src={outputImages.biological_growth} alt="Biological Growth" style={{ width: '100%', borderRadius: 'var(--border-radius)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                     </div>
                   )}
+                </div>
+                
+                {/* Second row with 2 centered images */}
+                <div className="image-grid-second-row" style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: '1.5rem',
+                  maxWidth: '66.666%',
+                  margin: '0 auto'
+                }}>
                   {outputImages.segmentation && (
                     <div className="image-card" style={{ padding: '1rem', background: 'var(--light)', borderRadius: 'var(--border-radius)', border: '1px solid var(--glass-border)' }}>
                       <div className="image-card-title" style={{ fontWeight: 600, marginBottom: '1rem', color: 'var(--dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -442,14 +474,6 @@ const ImageAnalysis = () => {
                         📊 Depth Analysis
                       </div>
                       <img src={outputImages.depth_estimation} alt="Depth Estimation" style={{ width: '100%', borderRadius: 'var(--border-radius)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                    </div>
-                  )}
-                  {outputImages.edge_detection && (
-                    <div className="image-card" style={{ padding: '1rem', background: 'var(--light)', borderRadius: 'var(--border-radius)', border: '1px solid var(--glass-border)' }}>
-                      <div className="image-card-title" style={{ fontWeight: 600, marginBottom: '1rem', color: 'var(--dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        🔲 Edge Detection
-                      </div>
-                      <img src={outputImages.edge_detection} alt="Edge Detection" style={{ width: '100%', borderRadius: 'var(--border-radius)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                     </div>
                   )}
                 </div>
@@ -752,98 +776,64 @@ const ImageAnalysis = () => {
             </div>
           </div>
 
-          {/* Data Science Insights */}
-          {results.data_science_insights && (
-            <div className="card" style={{ marginTop: '2rem' }}>
-              <div className="card-header">
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <BarChart3 size={20} />
-                  Data Science Insights
-                </h3>
-              </div>
-              <div className="card-body">
-                <div className="insights-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                  <div className="insight-card">
-                    <h6 style={{ marginBottom: '1rem', color: 'var(--dark)', fontWeight: 700 }}>Statistical Summary</h6>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Crack Density:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.statistical_summary?.crack_density?.toFixed(4) || 'N/A'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Deterioration Index:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.statistical_summary?.deterioration_index?.toFixed(2) || 'N/A'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Maintenance Urgency:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.statistical_summary?.maintenance_urgency || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="insight-card">
-                    <h6 style={{ marginBottom: '1rem', color: 'var(--dark)', fontWeight: 700 }}>Predictive Analytics</h6>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>6-Month Crack Growth:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.predictive_analytics?.crack_progression_6_months?.toFixed(1) || 'N/A'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Expected Cost:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>${results.data_science_insights.predictive_analytics?.expected_maintenance_cost?.toFixed(2) || 'N/A'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Risk Assessment:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.predictive_analytics?.risk_assessment || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="insight-card">
-                    <h6 style={{ marginBottom: '1rem', color: 'var(--dark)', fontWeight: 700 }}>Confidence Intervals</h6>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Detection Accuracy:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.inference_results?.confidence_intervals?.crack_detection_accuracy || 'N/A'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Material Precision:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.inference_results?.confidence_intervals?.material_classification_precision || 'N/A'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>Measurement Error:</span>
-                        <span style={{ fontWeight: 600, color: 'var(--dark)' }}>{results.data_science_insights.inference_results?.confidence_intervals?.growth_measurement_error || 'N/A'}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Action Buttons */}
           <div className="card" style={{ marginTop: '2rem' }}>
             <div className="card-body">
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button
-                  className="btn btn-secondary"
+                  className="btn-primary"
                   onClick={() => {
+                    // Clear all stored data from sessionStorage
+                    sessionStorage.removeItem('uploadedFile');
+                    sessionStorage.removeItem('uploadedPreview');
+                    sessionStorage.removeItem('analysisResults');
+                    sessionStorage.removeItem('outputImages');
+                    
+                    // Reset component state
                     setFile(null);
                     setPreview(null);
                     setResults(null);
                     setOutputImages(null);
                     setError(null);
+                    setProgress(0);
                   }}
                 >
                   <Upload size={18} style={{ marginRight: '0.5rem' }} />
                   Analyze Another Image
                 </button>
+                
+                {/* Add Clear Analysis Button */}
                 <button
-                  className="btn btn-outline"
-                  onClick={handleDownloadPDF}
+                  className="btn-secondary"
+                  onClick={() => {
+                    // Clear all stored data from sessionStorage
+                    sessionStorage.removeItem('uploadedFile');
+                    sessionStorage.removeItem('uploadedPreview');
+                    sessionStorage.removeItem('analysisResults');
+                    sessionStorage.removeItem('outputImages');
+                    
+                    // Reset component state
+                    setFile(null);
+                    setPreview(null);
+                    setResults(null);
+                    setOutputImages(null);
+                    setError(null);
+                    setProgress(0);
+                  }}
+                  style={{ 
+                    background: 'var(--secondary)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '0.75rem 1.5rem',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
                 >
-                  <Download size={18} style={{ marginRight: '0.5rem' }} />
-                  Download Report
+                  <AlertTriangle size={18} style={{ marginRight: '0.5rem' }} />
+                  Clear Analysis
                 </button>
               </div>
             </div>

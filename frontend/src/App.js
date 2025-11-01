@@ -8,6 +8,7 @@ import VideoAnalysis from './pages/VideoAnalysis';
 import RealTimeMonitoring from './pages/RealTimeMonitoring';
 import Analytics from './pages/Analytics';
 import About from './pages/About';
+import { AnalysisProvider } from './contexts/AnalysisContext';
   
 
 function App() {
@@ -48,7 +49,8 @@ function App() {
   ];
 
   return (
-    <div className="app-container">
+    <AnalysisProvider>
+      <div className="app-container">
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-overlay"></div>
@@ -191,6 +193,7 @@ function App() {
         </div>
       </footer>
     </div>
+    </AnalysisProvider>
   );
 }
 

@@ -180,6 +180,9 @@ except Exception as e:
     MATERIAL_MODEL = None
     MODELS_STATUS = {'error': str(e)}
 
+    # Cache last analysis so analytics tab / PDF can use the most recent uploaded image
+    LAST_ANALYSIS = None
+
 def create_environmental_impact_graphs(carbon_footprint, water_footprint, material_quantity, energy_consumption):
     """Create comprehensive environmental impact visualizations with proper labeling"""
     try:
@@ -367,6 +370,79 @@ def create_environmental_impact_graphs(carbon_footprint, water_footprint, materi
         import traceback
         traceback.print_exc()
         return {}
+
+
+def create_material_properties_chart(material_name, probabilities, carbon_footprint, sustainability_score):
+    """Create a bar chart for material properties comparison across all materials
+    Returns base64 PNG data URI or None on failure."""
+    try:
+        if not MATPLOTLIB_AVAILABLE:
+            return None
+
+        # Basic material properties lookup (kg/m3 and base durability score 0-10)
+        material_lookup = {
+            'Stone': {'density': 2500, 'durability': 8.5},
+            'Brick': {'density': 1800, 'durability': 7.0},
+            'Concrete': {'density': 2400, 'durability': 8.0},
+            'Plaster': {'density': 900, 'durability': 4.5},
+            'Wood': {'density': 600, 'durability': 5.0},
+            'Metal': {'density': 7800, 'durability': 9.0},
+            'Marble': {'density': 2700, 'durability': 8.0},
+            'Sandstone': {'density': 2200, 'durability': 6.5}
+        }
+
+        # Get all materials and their properties
+        all_materials = list(material_lookup.keys())
+        chart_data = []
+
+        for mat in all_materials:
+            props = material_lookup[mat]
+            # Environmental impact estimated as combination of carbon_footprint and inverse sustainability
+            environmental_impact = float(carbon_footprint) * (1.0 - (sustainability_score / 10.0))
+
+            chart_data.extend([
+                {'material': mat, 'property': 'Density (kg/m³)', 'value': props['density']},
+                {'material': mat, 'property': 'Durability (0-10)', 'value': props['durability']},
+                {'material': mat, 'property': 'Environmental Impact', 'value': environmental_impact}
+            ])
+
+        # Create grouped bar chart
+        fig, ax = plt.subplots(figsize=(12, 6))
+
+        # Group by property
+        properties = ['Density (kg/m³)', 'Durability (0-10)', 'Environmental Impact']
+        colors = ['#6C7A89', '#4ECDC4', '#FF6B6B']
+
+        x = np.arange(len(all_materials))
+        width = 0.25
+
+        for i, prop in enumerate(properties):
+            values = [d['value'] for d in chart_data if d['property'] == prop]
+            # Scale density for better visualization
+            if prop == 'Density (kg/m³)':
+                values = [v / 1000.0 for v in values]  # Scale down
+            ax.bar(x + i*width, values, width, label=prop, color=colors[i], alpha=0.8)
+
+        ax.set_xlabel('Materials')
+        ax.set_ylabel('Scaled Values')
+        ax.set_title('Material Properties Comparison', fontsize=14, fontweight='bold')
+        ax.set_xticks(x + width)
+        ax.set_xticklabels(all_materials)
+        ax.legend()
+        ax.grid(True, alpha=0.3, axis='y')
+
+        plt.tight_layout()
+
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', dpi=200, bbox_inches='tight', facecolor='white')
+        buf.seek(0)
+        chart_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+        plt.close(fig)
+        return f'data:image/png;base64,{chart_b64}'
+
+    except Exception as e:
+        print(f"❌ create_material_properties_chart failed: {e}")
+        return None
 
 def create_data_science_inference_graphs(analysis_results):
     """Create data science graphs with statistical inference and proper labeling"""
@@ -591,6 +667,15 @@ def analyze_image_comprehensive(image_np, px_to_cm_ratio=0.1, confidence_thresho
             'predicted_material': material,
             'probabilities': probabilities
         }
+
+        # Compute material properties and small bar chart
+        try:
+            material_name = material_analysis.get('predicted_material', 'Unknown')
+            material_density_chart = create_material_properties_chart(material_name, material_analysis.get('probabilities'), carbon_footprint=0, sustainability_score=5)  # placeholders will be updated later when carbon calc done
+            if material_density_chart:
+                material_analysis['material_properties_chart'] = material_density_chart
+        except Exception as e:
+            print(f"⚠️ Could not create material properties chart in analyze_image_comprehensive: {e}")
 
         # Calculate statistics
         total_cracks = len(crack_details)
@@ -981,24 +1066,62 @@ def analyze():
             "depth_estimation": image_to_base64(depth_heatmap),
             "edge_detection": image_to_base64(edges)
         }
-        
+
+        # Create material properties chart now that carbon & sustainability known
+        try:
+            # Basic material properties lookup (kg/m3 and base durability score 0-10)
+            material_lookup = {
+                'Stone': {'density': 2500, 'durability': 8.5},
+                'Brick': {'density': 1800, 'durability': 7.0},
+                'Concrete': {'density': 2400, 'durability': 8.0},
+                'Plaster': {'density': 900, 'durability': 4.5},
+                'Wood': {'density': 600, 'durability': 5.0},
+                'Metal': {'density': 7800, 'durability': 9.0},
+                'Marble': {'density': 2700, 'durability': 8.0},
+                'Sandstone': {'density': 2200, 'durability': 6.5}
+            }
+            mat_name = material_analysis.get('predicted_material', 'Unknown')
+            mat_chart = create_material_properties_chart(mat_name, material_analysis.get('probabilities'), carbon_footprint, sustainability_score)
+            if mat_chart:
+                # add to both results and output images so frontend can display anywhere
+                results['material_analysis'] = results.get('material_analysis', {})
+                # Get properties from lookup
+                props = material_lookup.get(mat_name, {'density': 1500, 'durability': 5.0})
+                results['material_analysis']['material_properties'] = {
+                    'material_name': mat_name,
+                    'density_kg_m3': props['density'],
+                    'durability_score': props['durability'],
+                    'environmental_impact': float(carbon_footprint) * (1.0 - (sustainability_score / 10.0))
+                }
+                output_images['material_properties_chart'] = mat_chart
+        except Exception as e:
+            print(f"⚠️ Could not create material properties chart: {e}")
+
         print("✅ Analysis completed successfully")
-        
+
+        # Cache last analysis for analytics page / download
+        global LAST_ANALYSIS
+        LAST_ANALYSIS = {
+            'timestamp': datetime.now().isoformat(),
+            'results': convert_numpy_types(results),
+            'output_images': output_images,
+            'analysis_summary': convert_numpy_types({
+                "total_cracks": total_cracks,
+                "biological_growth_coverage": f"{growth_analysis['growth_percentage']}%",
+                "primary_material": material_analysis['predicted_material'],
+                "environmental_impact": results['environmental_impact_assessment']['impact_level'],
+                "structural_health_score": results['data_science_insights']['statistical_summary']['structural_health_score'],
+                "sustainability_score": results['environmental_impact_assessment']['sustainability_score']
+            })
+        }
+
         return jsonify({
             "status": "success",
             "message": "Structural health monitoring analysis completed successfully with comprehensive environmental assessment",
             "analysis_type": "structural_health_comprehensive",
             "results": convert_numpy_types(results),
             "output_images": output_images,
-            "analysis_summary": convert_numpy_types({
-                "total_cracks": total_cracks,
-                "biological_growth_coverage": f"{growth_analysis['growth_percentage']}%",
-                "primary_material": material_analysis['predicted_material'],
-                "environmental_impact": results['environmental_impact_assessment']['impact_level'],
-                "structural_health_score": results['data_science_insights']['statistical_summary']['structural_health_score'],
-                "sustainability_score": results['environmental_impact_assessment']['sustainability_score'],
-                "analysis_status": "✅ All structural health monitoring functions executed with enhanced analytics"
-            })
+            "analysis_summary": LAST_ANALYSIS['analysis_summary']
         })
         
     except Exception as e:
@@ -1219,110 +1342,25 @@ def stream_feed():
 def get_analytics():
     """Get comprehensive analytics data for the dashboard"""
     try:
-        # Get time range parameter
-        time_range = request.args.get('range', '7d')  # Default to 7 days
-        
-        # Parse time range
-        if time_range == '24h':
-            days = 1
-        elif time_range == '7d':
-            days = 7
-        elif time_range == '30d':
-            days = 30
-        elif time_range == '90d':
-            days = 90
-        else:
-            days = 7  # Default fallback
-        
-        # Generate mock analytics data (in real implementation, this would come from database)
+        # If there's a cached last analysis, use it as the analytics source
+        global LAST_ANALYSIS
+        if LAST_ANALYSIS:
+            # Provide a simplified analytics response based on the most recent image analysis
+            return jsonify({
+                'success': True,
+                'source': 'last_uploaded_image',
+                'timestamp': LAST_ANALYSIS.get('timestamp'),
+                'results': LAST_ANALYSIS.get('results'),
+                'output_images': LAST_ANALYSIS.get('output_images'),
+                'analysis_summary': LAST_ANALYSIS.get('analysis_summary')
+            })
+
+        # Fallback: return lightweight mock analytics if no last analysis is available
         import random
-        
-        # Generate time series data
-        dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days, 0, -1)]
-        
-        # Create trends data in the format expected by frontend
-        trends = []
-        for i, date in enumerate(dates):
-            # Structural health trend
-            trends.append({
-                'date': date,
-                'value': round(85 + random.uniform(-10, 5), 1),
-                'metric': 'Structural Health'
-            })
-            
-            # Crack detection trend
-            trends.append({
-                'date': date,
-                'value': max(0, int(random.gauss(3, 2))),
-                'metric': 'Crack Count'
-            })
-            
-            # Biological growth trend
-            trends.append({
-                'date': date,
-                'value': max(0, round(random.gauss(5, 3), 1)),
-                'metric': 'Growth %'
-            })
-        
-        # Severity distribution data
-        severity_types = ['Minor', 'Moderate', 'Severe', 'Critical']
-        severity_values = [random.randint(5, 25) for _ in severity_types]
-        severityDistribution = [
-            {'type': sev_type, 'value': sev_val}
-            for sev_type, sev_val in zip(severity_types, severity_values)
-        ]
-        
-        # Material distribution data
-        material_types = ['Stone', 'Brick', 'Concrete', 'Plaster', 'Wood']
-        material_counts = [random.randint(10, 50) for _ in material_types]
-        materialDistribution = [
-            {'material': mat_type, 'count': mat_count}
-            for mat_type, mat_count in zip(material_types, material_counts)
-        ]
-        
-        # Key findings
-        keyFindings = [
-            f"Detected {sum(severity_values)} total structural issues across all severity levels",
-            f"Average structural health score: {round(sum([t['value'] for t in trends if t['metric'] == 'Structural Health']) / len(dates), 1)}%",
-            f"Biological growth affecting {round(sum([t['value'] for t in trends if t['metric'] == 'Growth %']) / len(dates), 1)}% of monitored areas",
-            f"Primary material composition: {material_types[material_counts.index(max(material_counts))]} ({max(material_counts)} detections)"
-        ]
-        
-        # Recommendations
-        recommendations = [
-            "Schedule comprehensive structural inspection within next 30 days",
-            "Implement biological growth monitoring and removal program",
-            "Consider material-specific conservation strategies based on detected compositions",
-            "Establish regular maintenance schedule based on current deterioration trends",
-            "Monitor environmental factors contributing to accelerated degradation"
-        ]
-        
-        # Additional analytics data
-        analytics_summary = {
-            "total_analyses": days * 24,  # Assuming hourly analyses
-            "average_structural_health": round(sum([t['value'] for t in trends if t['metric'] == 'Structural Health']) / len(dates), 1),
-            "total_cracks_detected": sum([t['value'] for t in trends if t['metric'] == 'Crack Count']),
-            "average_growth_percentage": round(sum([t['value'] for t in trends if t['metric'] == 'Growth %']) / len(dates), 1),
-            "detection_accuracy": round(85 + random.uniform(-5, 10), 1),
-            "risk_distribution": {
-                "Low": random.randint(10, 30),
-                "Medium": random.randint(15, 35),
-                "High": random.randint(5, 20),
-                "Critical": random.randint(1, 10)
-            }
-        }
-        
-        return jsonify({
-            "success": True,
-            "time_range": time_range,
-            "trends": trends,
-            "severityDistribution": severityDistribution,
-            "materialDistribution": materialDistribution,
-            "keyFindings": keyFindings,
-            "recommendations": recommendations,
-            "summary": analytics_summary,
-            "generated_at": datetime.now().isoformat()
-        })
+        time_range = request.args.get('range', '7d')
+        dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(7, 0, -1)]
+        trends = [{'date': d, 'metric': 'Structural Health', 'value': round(85 + random.uniform(-10, 5), 1)} for d in dates]
+        return jsonify({'success': True, 'time_range': time_range, 'trends': trends, 'generated_at': datetime.now().isoformat()})
         
     except Exception as e:
         print(f"❌ Analytics error: {str(e)}")
@@ -1493,6 +1531,38 @@ def capture_and_analyze():
             
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/download_report', methods=['GET'])
+def download_report():
+    """Download a PDF report generated from the last analysis"""
+    try:
+        global LAST_ANALYSIS
+        if not LAST_ANALYSIS:
+            return jsonify({'success': False, 'error': 'No analysis available to generate report'}), 400
+
+        # Import generator locally to avoid hard dependency at import time
+        try:
+            from pdf_report import generate_pdf_report
+        except Exception as e:
+            print(f"❌ PDF generator import failed: {e}")
+            return jsonify({'success': False, 'error': 'PDF generator not available on server'}), 500
+
+        analysis_results = LAST_ANALYSIS.get('results')
+        output_images = LAST_ANALYSIS.get('output_images')
+
+        pdf_bytes = generate_pdf_report(analysis_results, output_images)
+        if not pdf_bytes:
+            return jsonify({'success': False, 'error': 'PDF generation failed'}), 500
+
+        from flask import Response
+        return Response(pdf_bytes, mimetype='application/pdf', headers={
+            'Content-Disposition': 'attachment; filename=heritage_analysis_report.pdf'
+        })
+
+    except Exception as e:
+        print(f"❌ Download report error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
         
 if __name__ == '__main__':
