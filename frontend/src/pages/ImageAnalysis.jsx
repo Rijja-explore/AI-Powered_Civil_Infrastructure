@@ -247,7 +247,7 @@ const ImageAnalysis = () => {
               Upload Image for Analysis
             </h2>
             <p className="mb-1" style={{ color: 'var(--secondary)', marginTop: '0.25rem' }}>
-              Comprehensive analysis including crack detection, biological growth, material classification, and environmental impact assessment
+              Comprehensive structural analysis including crack detection, biological growth, material classification, and environmental impact assessment
             </p>
           </div>
           <div className="card-body">
@@ -258,7 +258,7 @@ const ImageAnalysis = () => {
                 PNG, JPG, JPEG • Max 10MB
               </p>
               <p style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>
-                Comprehensive analysis including crack detection, biological growth,<br />
+                Comprehensive structural analysis including crack detection, biological growth,<br />
                 material classification, and environmental impact assessment
               </p>
               <input

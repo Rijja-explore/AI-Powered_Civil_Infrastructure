@@ -25,7 +25,7 @@ except ImportError:
 from pdf_report import save_image_to_temp, generate_pdf_report
 
 # Set page config as the FIRST Streamlit command
-st.set_page_config(page_title="Heritage Sites Health Monitoring", layout="wide")
+st.set_page_config(page_title="AI-Powered Structural Health Monitor", layout="wide")
 
 # Initialize session state
 if 'analysis_results' not in st.session_state:
@@ -681,9 +681,9 @@ def image_to_base64(image_np):
     return f"data:image/png;base64,{image_base64}"
 
 def main():
-    st.title("🏛 Heritage Sites Health Monitoring System")
+    st.title("� AI-Powered Structural Health Monitoring System")
     st.markdown("""
-    Advanced AI-powered monitoring system for heritage site conservation
+    Advanced AI-powered monitoring system for civil infrastructure health assessment
     
     This system provides comprehensive analysis including:
     - 🔍 Crack Detection: AI-powered structural damage identification
@@ -715,7 +715,7 @@ def main():
     tab1, tab2, tab3, tab4 = st.tabs(["🔬 Image Analysis", "📽 Video Analysis", "🌍 Environmental Footprints", "ℹ About"])
 
     with tab1:
-        st.header("Upload and Analyze Heritage Site Images")
+        st.header("Upload and Analyze Civil Infrastructure Images")
         uploaded_file = st.file_uploader("Choose an image file", type=['png', 'jpg', 'jpeg'])
         if uploaded_file is not None:
             st.subheader("📸 Original Image")
@@ -909,13 +909,13 @@ def main():
                 st.download_button(
                     label="📥 Download PDF",
                     data=st.session_state.pdf_buffer,
-                    file_name=f"Heritage_Analysis_Report_{st.session_state.image_name or 'report'}.pdf",
+                    file_name=f"Structural_Health_Analysis_Report_{st.session_state.image_name or 'report'}.pdf",
                     mime="application/pdf",
                     key="pdf_download_button"
                 )
 
     with tab2:
-        st.header("Upload and Analyze Heritage Site Videos")
+        st.header("Upload and Analyze Civil Infrastructure Videos")
         uploaded_video = st.file_uploader("Choose a video file", type=['mp4', 'avi', 'mov'])
         if uploaded_video is not None:
             tfile = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
@@ -1104,21 +1104,21 @@ def main():
                                         frame_results['water_footprint'],
                                         predict_crack_progression(frame_results['crack_details'])
                                     )
-                                    if pdf_buffer:
-                                        st.session_state.video_pdf_buffers[frame_number] = pdf_buffer
-                                        st.success("✅ PDF report generated successfully!")
-                                    else:
-                                        st.error("❌ Failed to generate PDF report.")
+                        if pdf_buffer:
+                            st.session_state.video_pdf_buffers[frame_number] = pdf_buffer
+                            st.success("✅ PDF report generated successfully!")
+                        else:
+                            st.error("❌ Failed to generate PDF report.")
 
                         if frame_number in st.session_state.video_pdf_buffers:
                             st.download_button(
                                 label="📥 Download PDF",
                                 data=st.session_state.video_pdf_buffers[frame_number],
-                                file_name=f"Heritage_Analysis_Frame_{frame_number}.pdf",
+                                file_name=f"Structural_Health_Analysis_Frame_{frame_number}.pdf",
                                 mime="application/pdf",
                                 key=f"pdf_download_button_frame_{frame_number}"
                             )
-
+                        
                         progress_bar.empty()
                         status_text.empty()
 
@@ -1148,10 +1148,10 @@ def main():
                 st.metric("Water Footprint", f"{water_footprint:.2f} liters")
 
     with tab4:
-        st.header("ℹ About Heritage Sites Health Monitoring")
+        st.header("ℹ About AI-Powered Structural Health Monitoring")
         st.markdown("""
         ### 🎯 Purpose
-        This application aids heritage conservators in monitoring the structural health of historical buildings using AI.
+        This application aids civil engineers and infrastructure managers in monitoring the structural health of buildings, bridges, and other critical infrastructure using AI.
 
         ### 🔧 Technologies Used
         - YOLOv8: Object detection and segmentation

@@ -4,18 +4,18 @@ import { Line, Pie, Bar } from '@ant-design/plots';
 import toast from 'react-hot-toast';
 
 const Analytics = () => {
-  const [timeRange, setTimeRange] = useState('7d'); // 24h, 7d, 30d, 90d
+  const [dataType, setDataType] = useState('all'); // all, cracks, materials, environmental
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchAnalytics();
-  }, [timeRange]);
+  }, [dataType]);
 
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5002/analytics?range=${timeRange}`);
+      const response = await fetch(`http://localhost:5002/analytics/dynamic?type=${dataType}`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to fetch analytics' }));
@@ -51,13 +51,13 @@ const Analytics = () => {
 
   const downloadReport = async () => {
     try {
-      const response = await fetch(`http://localhost:5002/analytics/report?range=${timeRange}`);
+      const response = await fetch(`http://localhost:5002/analytics/report/dynamic?type=${dataType}`);
       if (!response.ok) throw new Error('Failed to generate report');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `analytics-report-${timeRange}-${new Date().toISOString()}.pdf`;
+      a.download = `analytics-report-${dataType}-${new Date().toISOString()}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -220,14 +220,14 @@ const Analytics = () => {
               <BarChart className="inline-icon glow-icon" size={32} />
               Analytics & Insights
             </h1>
-            <p>Comprehensive analysis of heritage site health data</p>
+            <p>Dynamic analysis based on uploaded image data and AI insights</p>
           </div>
           <div className="header-controls">
-            <div className="time-range-selector glass-controls">
-              <button className={`time-btn ${timeRange === '24h' ? 'active' : ''}`} onClick={() => setTimeRange('24h')}>24H</button>
-              <button className={`time-btn ${timeRange === '7d' ? 'active' : ''}`} onClick={() => setTimeRange('7d')}>7D</button>
-              <button className={`time-btn ${timeRange === '30d' ? 'active' : ''}`} onClick={() => setTimeRange('30d')}>30D</button>
-              <button className={`time-btn ${timeRange === '90d' ? 'active' : ''}`} onClick={() => setTimeRange('90d')}>90D</button>
+            <div className="data-type-selector glass-controls">
+              <button className={`time-btn ${dataType === 'all' ? 'active' : ''}`} onClick={() => setDataType('all')}>All Data</button>
+              <button className={`time-btn ${dataType === 'cracks' ? 'active' : ''}`} onClick={() => setDataType('cracks')}>Cracks</button>
+              <button className={`time-btn ${dataType === 'materials' ? 'active' : ''}`} onClick={() => setDataType('materials')}>Materials</button>
+              <button className={`time-btn ${dataType === 'environmental' ? 'active' : ''}`} onClick={() => setDataType('environmental')}>Environmental</button>
             </div>
             <button onClick={downloadReport} className="btn btn-glass" title="Download report">
               <Download size={18} /> Export Report

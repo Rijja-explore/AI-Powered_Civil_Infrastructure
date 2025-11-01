@@ -16,7 +16,6 @@ const Navbar = () => {
     { to: '/', icon: Camera, label: 'Image Analysis' },
     { to: '/video-analysis', icon: Video, label: 'Video Analysis' },
     { to: '/environmental', icon: Leaf, label: 'Environmental' },
-    { to: '/realtime', icon: Activity, label: 'Real-time' },
     { to: '/analytics', icon: BarChart, label: 'Analytics' }
   ];
 
@@ -24,7 +23,7 @@ const Navbar = () => {
     <header className="header" role="banner">
       <div className="header-content">
         <div className="brand" aria-hidden>
-          <h1>Heritage Health Monitor</h1>
+          <h1 style={{ color: 'white' }}>Heritage Health Monitor</h1>
           <p className="sr-only">Navigation for Heritage Health Monitor application</p>
         </div>
 
@@ -55,6 +54,10 @@ const Navbar = () => {
           <button className="btn btn-secondary" title="Account">
             <User size={16} />
           </button>
+        </div>
+
+        <div className="header-status">
+          <span style={{ color: 'white', fontSize: '0.875rem' }}>🟢 System Online</span>
         </div>
       </div>
     </header>

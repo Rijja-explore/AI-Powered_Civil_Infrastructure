@@ -88,12 +88,12 @@ const Environmental = () => {
           material_confidence: 0.85
         },
         recommendations: [
-          "Implement natural ventilation to reduce energy consumption by 15%",
-          "Install rainwater harvesting system to reduce water footprint",
-          "Consider solar panels for renewable energy generation",
-          "Use eco-friendly cleaning materials with low VOC emissions",
-          "Implement LED lighting to reduce energy consumption by 30%",
-          "Use locally sourced restoration materials to minimize transport emissions"
+            "Implement natural ventilation to reduce energy consumption by 15%",
+            "Install rainwater harvesting system to reduce water footprint",
+            "Consider solar panels for renewable energy generation",
+            "Use eco-friendly construction materials with low VOC emissions",
+            "Implement LED lighting to reduce energy consumption by 30%",
+            "Use locally sourced construction materials to minimize transport emissions"
         ],
         impact_trends: {
           carbon_trend: -5.2,
@@ -171,7 +171,7 @@ const Environmental = () => {
             <Leaf className="inline-icon glow-icon" size={32} />
             Environmental Impact Assessment
           </h1>
-          <p>Comprehensive environmental analysis and sustainability metrics for heritage site conservation</p>
+          <p>Comprehensive environmental analysis and sustainability metrics for infrastructure development and maintenance</p>
         </div>
         <div className="header-backdrop"></div>
       </div>

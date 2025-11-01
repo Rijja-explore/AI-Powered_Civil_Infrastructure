@@ -1716,6 +1716,57 @@ cv2.destroyAllWindows()
 #         Results should be verified by experts before conservation decisions.
 #         """)
 
+def start_real_time_capture():
+    """
+    Start real-time camera capture and analysis
+    Returns generator yielding processed frames
+    """
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        raise Exception("Cannot open camera")
+    
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+                
+            # Process frame
+            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # YOLO detection
+            yolo_results = yolo_model.predict(source=image_rgb, conf=0.3, save=False)
+            
+            # Draw detection results
+            annotated_frame = yolo_results[0].plot()
+            
+            # Convert back to BGR for OpenCV
+            annotated_frame_bgr = cv2.cvtColor(annotated_frame, cv2.COLOR_RGB2BGR)
+            
+            yield annotated_frame_bgr
+            
+    except Exception as e:
+        print(f"Error in real-time capture: {e}")
+    finally:
+        cap.release()
+
+def capture_single_frame():
+    """
+    Capture a single frame from camera for analysis
+    """
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        return None, "Cannot open camera"
+    
+    try:
+        ret, frame = cap.read()
+        if ret:
+            return frame, None
+        else:
+            return None, "Failed to capture frame"
+    finally:
+        cap.release()
+
 # if __name__ == "__main__":
 #     main()
 #     if st.button("📄 Generate Text Report", key="generate_pdf_button"):

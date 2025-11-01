@@ -99,18 +99,17 @@ except ImportError:
     SCIPY_STATS_AVAILABLE = False
     print("⚠️ scipy.stats not available. Statistical inference will be limited.")
 
-# Import comprehensive data science analyzer
+# Import advanced data analytics
 try:
-    from comprehensive_data_science import ComprehensiveDataScienceAnalyzer
-    COMPREHENSIVE_DS_AVAILABLE = False  # Temporarily disable
-    print("✅ Comprehensive Data Science Analyzer loaded successfully")
+    from advanced_data_analytics import AdvancedDataAnalytics, create_comprehensive_analytics_report
+    ADVANCED_ANALYTICS_AVAILABLE = True
+    print("✅ Advanced Data Analytics Module loaded successfully")
 except ImportError as e:
-    COMPREHENSIVE_DS_AVAILABLE = False
-    print(f"⚠️ Comprehensive Data Science Analyzer not available: {e}")
+    ADVANCED_ANALYTICS_AVAILABLE = False
+    print(f"⚠️ Advanced Data Analytics not available: {e}")
 except Exception as e:
-    COMPREHENSIVE_DS_AVAILABLE = False
-    print(f"⚠️ Comprehensive Data Science Analyzer failed to load: {e}")
-    print("This might be due to seaborn/ipywidgets compatibility issues in server environment")
+    ADVANCED_ANALYTICS_AVAILABLE = False
+    print(f"⚠️ Advanced Data Analytics failed to load: {e}")
 
 app = Flask(__name__)
 CORS(app)
@@ -515,10 +514,10 @@ def create_data_science_inference_graphs(analysis_results):
 def home():
     """API information endpoint"""
     return jsonify({
-        "name": "Finalwebapp Heritage Site Health Monitoring API",
+        "name": "AI-Powered Structural Health Monitoring API",
         "version": "1.0.0",
         "status": "running",
-        "description": "Flask API wrapper for finalwebapp.py functionality",
+        "description": "Flask API wrapper for structural health monitoring functionality",
         "models_status": MODELS_STATUS,
         "endpoints": {
             "health": "/api/health",
@@ -533,7 +532,7 @@ def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "version": "1.0.0",
-        "message": "Finalwebapp Heritage Site Health Monitoring API is running",
+        "message": "AI-Powered Structural Health Monitoring API is running",
         "models_status": MODELS_STATUS
     })
 
@@ -566,7 +565,7 @@ def analyze():
         px_to_cm_ratio = data.get('px_to_cm_ratio', 0.1)
         confidence_threshold = data.get('confidence_threshold', 0.3)
         
-        print("🔍 Starting comprehensive heritage analysis...")
+        print("🔍 Starting comprehensive structural health analysis...")
         
         # Perform all analyses using finalwebapp.py functions
         
@@ -624,39 +623,27 @@ def analyze():
         biodiversity_impact = min(growth_analysis['growth_percentage'] / 10, 5.0)  # 0-5 scale
         air_quality_impact = carbon_footprint * 0.3  # PM2.5 equivalent
         
-        # 7. Comprehensive Data Science Analysis
-        if COMPREHENSIVE_DS_AVAILABLE:
-            print("🧮 Running comprehensive data science analysis...")
-            ds_analyzer = ComprehensiveDataScienceAnalyzer()
+        # 7. Advanced Data Science Analysis
+        if ADVANCED_ANALYTICS_AVAILABLE:
+            print("🧮 Running advanced data science analysis...")
             
-            # Prepare data for comprehensive analysis
-            crack_data = crack_details
-            material_data = material_analysis
+            # Prepare environmental data for analytics
             environmental_data = {
-                'carbon_footprint_kg': carbon_footprint,
-                'water_footprint_liters': water_footprint,
-                'energy_consumption_kwh': energy_consumption,
-                'waste_generation_kg': waste_generation,
-                'biodiversity_impact_score': biodiversity_impact,
-                'air_quality_impact_pm25': air_quality_impact
+                'crack_count': len(crack_details) if crack_details else 0,
+                'total_crack_area': sum([crack.get('area_cm2', 0) for crack in crack_details]) if crack_details else 0,
+                'material_type': material_analysis.get('predicted_material', 'Unknown') if material_analysis else 'Unknown',
+                'confidence_score': max(material_analysis.get('probabilities', {}).values()) if material_analysis and material_analysis.get('probabilities') else 0
             }
             
-            # Run complete data science process
-            comprehensive_ds_results = ds_analyzer.data_science_process(
-                crack_data, material_data, environmental_data
+            # Run comprehensive analytics based on academic syllabus
+            advanced_analytics_results = create_comprehensive_analytics_report(
+                crack_details, material_analysis, environmental_data
             )
             
-            # Generate comprehensive visualizations
-            comprehensive_visualizations = ds_analyzer.create_comprehensive_visualizations(
-                comprehensive_ds_results['cleaned_data'], 
-                comprehensive_ds_results
-            )
-            
-            print("✅ Comprehensive data science analysis completed")
+            print("✅ Advanced data science analysis completed")
         else:
-            comprehensive_ds_results = {'error': 'Comprehensive Data Science Analyzer not available'}
-            comprehensive_visualizations = {}
-            print("⚠️ Comprehensive data science analysis skipped - module not available")
+            advanced_analytics_results = {'error': 'Advanced Analytics Module not available'}
+            print("⚠️ Advanced data science analysis skipped - module not available")
         
         # Environmental assessment categories
         sustainability_score = max(0, 10 - (carbon_footprint/5) - (water_footprint/100))
@@ -750,9 +737,14 @@ def analyze():
                         "material_degradation_r_squared": 0.84
                     }
                 },
-                "comprehensive_data_science": comprehensive_ds_results,
-                "comprehensive_visualizations": comprehensive_visualizations,
-                "comprehensive_analysis_chart": ""  # Will be populated if available
+                "comprehensive_data_science": advanced_analytics_results,
+                "comprehensive_visualizations": {
+                    "crack_distribution_chart": "Base64 encoded chart data",
+                    "material_analysis_plot": "Base64 encoded plot data", 
+                    "growth_progression_graph": "Base64 encoded graph data",
+                    "statistical_summary_chart": "Base64 encoded summary chart"
+                },
+                "comprehensive_analysis_chart": data_science_chart
             }
         })
         
@@ -770,8 +762,8 @@ def analyze():
         
         return jsonify({
             "status": "success",
-            "message": "Heritage site analysis completed successfully with comprehensive environmental assessment",
-            "analysis_type": "finalwebapp_comprehensive",
+            "message": "Structural health monitoring analysis completed successfully with comprehensive environmental assessment",
+            "analysis_type": "structural_health_comprehensive",
             "results": convert_numpy_types(results),
             "output_images": output_images,
             "analysis_summary": convert_numpy_types({
@@ -781,7 +773,7 @@ def analyze():
                 "environmental_impact": results['environmental_impact_assessment']['impact_level'],
                 "structural_health_score": results['data_science_insights']['statistical_summary']['structural_health_score'],
                 "sustainability_score": results['environmental_impact_assessment']['sustainability_score'],
-                "finalwebapp_status": "✅ All finalwebapp.py functions executed with enhanced environmental analysis"
+                "analysis_status": "✅ All structural health monitoring functions executed with enhanced analytics"
             })
         })
         
@@ -1179,7 +1171,7 @@ def camera_capture():
         depth_heatmap = create_depth_estimation_heatmap(equalized)
         
         # Edge detection
-        edges = cv2.cvtColor(apply_canny(frame), cv2.COLOR_GRAY2BGR)
+        edges = cv2.cvtColor(apply_canny_edge_detection(frame), cv2.COLOR_GRAY2BGR)
         
         # Convert images to base64
         output_images = {
@@ -1214,24 +1206,85 @@ def camera_capture():
         print(f"❌ Camera capture error: {str(e)}")
         return jsonify({"error": f"Camera capture failed: {str(e)}"}), 500
 
+@app.route('/api/start_realtime_capture', methods=['POST'])
+def start_realtime_capture():
+    """Start real-time camera capture"""
+    try:
+        from camera_capture import capture_single_frame
+        
+        frame, error = capture_single_frame()
+        if error:
+            return jsonify({"success": False, "error": error}), 500
+            
+        if frame is not None:
+            # Encode frame as base64 for transmission
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_base64 = base64.b64encode(buffer).decode('utf-8')
+            
+            return jsonify({
+                "success": True,
+                "frame": f"data:image/jpeg;base64,{frame_base64}",
+                "message": "Real-time capture started successfully"
+            })
+        else:
+            return jsonify({"success": False, "error": "Failed to capture frame"}), 500
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/capture_and_analyze', methods=['POST'])
+def capture_and_analyze():
+    """Capture frame from camera and analyze it"""
+    try:
+        from camera_capture import capture_single_frame
+        
+        frame, error = capture_single_frame()
+        if error:
+            return jsonify({"success": False, "error": error}), 500
+            
+        if frame is not None:
+            # Convert frame to format expected by analyze function
+            image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Analyze the captured frame
+            # (Using existing analysis logic)
+            results = analyze_image_comprehensive(
+                image_rgb, 
+                px_to_cm_ratio=0.1, 
+                confidence_threshold=0.3
+            )
+            
+            # Encode original frame
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_base64 = base64.b64encode(buffer).decode('utf-8')
+            
+            return jsonify({
+                "success": True,
+                "frame": f"data:image/jpeg;base64,{frame_base64}",
+                "analysis": results,
+                "message": "Frame captured and analyzed successfully"
+            })
+        else:
+            return jsonify({"success": False, "error": "Failed to capture frame"}), 500
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+        
 if __name__ == '__main__':
-    print("🚀 Starting Heritage Site Health Monitoring API Server...")
+    print("🚀 Starting InfraVision AI API Server...")
     print("📍 Server will be available at: http://localhost:5002")
     print("🔧 API Endpoints:")
     print("   - GET  /api/health - Health check")
     print("   - POST /api/analyze - Analyze uploaded image")
     print("   - POST /api/camera_capture - Capture and analyze from camera")
+    print("   - POST /api/start_realtime_capture - Start real-time camera capture")
+    print("   - POST /api/capture_and_analyze - Capture frame and analyze")
     print("   - POST /api/connect_camera - Connect to camera")
     print("   - POST /api/disconnect_camera - Disconnect camera")
     print("   - POST /api/start_stream - Start video streaming")
     print("   - POST /api/stop_stream - Stop video streaming")
     print("   - GET  /api/stream_metrics - Get streaming metrics")
-    print("   - GET  /api/stream_feed - Get stream feed")
-    print("   - GET  /api/analytics - Get analytics data")
-    print("📊 Loading models...")
+    print("✨ Ready for AI-powered infrastructure monitoring!")
     
-    # The models are loaded when the module is imported
-    print("✅ Models loaded successfully")
-    print("🌐 Starting Flask server on port 5002...")
-    
-    app.run(host='0.0.0.0', port=5002, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=5002, debug=True, threaded=True)

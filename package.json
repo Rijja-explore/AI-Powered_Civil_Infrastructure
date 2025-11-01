@@ -1,4 +1,17 @@
 {
+  "name": "infravision-ai",
+  "version": "2.0.0",
+  "description": "InfraVision AI - Intelligent Structural Health Monitoring & Infrastructure Analysis Platform",
+  "main": "finalwebapp_api.py",
+  "scripts": {
+    "start": "python finalwebapp_api.py",
+    "frontend": "cd frontend && npm start",
+    "install-all": "npm install && cd frontend && npm install",
+    "dev": "python start_enhanced_app.py"
+  },
+  "keywords": ["AI", "Infrastructure", "Computer Vision", "Structural Health", "Monitoring", "Civil Engineering"],
+  "author": "InfraVision AI Development Team",
+  "license": "MIT",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@popperjs/core": "^2.11.8",

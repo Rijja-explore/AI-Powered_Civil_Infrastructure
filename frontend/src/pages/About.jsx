@@ -1,49 +1,49 @@
 import React from 'react';
-import { Shield, Camera, Activity, BarChart3, Video, Users, Award, Globe, Heart, Code, BookOpen, Target } from 'lucide-react';
+import { Shield, Camera, Activity, BarChart3, Video, Users, Award, Globe, Heart, Code, BookOpen, Target, Building, Wrench, AlertTriangle } from 'lucide-react';
 
 const About = () => {
   const team = [
     {
-      name: "AI Heritage Preservation Team",
-      role: "Developers & Researchers",
-      description: "A multidisciplinary team of AI engineers, computer vision experts, and heritage conservation specialists working together to protect cultural heritage through technology."
+      name: "AI Infrastructure Engineering Team",
+      role: "Developers & Civil Engineers",
+      description: "A multidisciplinary team of AI engineers, computer vision experts, and civil engineering specialists working together to ensure infrastructure safety through advanced technology."
     }
   ];
 
   const technologies = [
-    { name: "YOLOv8", description: "Advanced object detection for crack and damage identification", icon: Camera },
-    { name: "OpenCV", description: "Computer vision library for image processing and analysis", icon: Activity },
-    { name: "TensorFlow/PyTorch", description: "Deep learning frameworks for material classification", icon: BarChart3 },
-    { name: "React", description: "Modern web interface for real-time monitoring", icon: Code },
-    { name: "Flask", description: "Python web framework for AI model deployment", icon: Globe }
+    { name: "YOLOv8", description: "Advanced object detection for crack and structural damage identification", icon: Camera },
+    { name: "OpenCV", description: "Computer vision library for image processing and structural analysis", icon: Activity },
+    { name: "TensorFlow/PyTorch", description: "Deep learning frameworks for material classification and predictive analytics", icon: BarChart3 },
+    { name: "React", description: "Modern web interface for real-time infrastructure monitoring", icon: Code },
+    { name: "Flask", description: "Python web framework for AI model deployment and data analytics", icon: Globe }
   ];
 
   const features = [
     {
       icon: Shield,
       title: "AI-Powered Analysis",
-      description: "Advanced machine learning models automatically detect structural damage, biological growth, and material degradation in heritage sites."
+      description: "Advanced machine learning models automatically detect structural damage, material degradation, and safety risks in civil infrastructure."
     },
     {
       icon: Activity,
       title: "Real-time Monitoring",
-      description: "Continuous surveillance systems provide instant alerts and enable proactive conservation measures."
+      description: "Continuous surveillance systems provide instant alerts and enable proactive maintenance measures for critical infrastructure."
     },
     {
       icon: Target,
       title: "Precision Assessment",
-      description: "Accurate measurements and severity classifications help prioritize conservation efforts and allocate resources effectively."
+      description: "Accurate measurements and severity classifications help prioritize maintenance efforts and allocate resources effectively."
     },
     {
-      icon: Heart,
-      title: "Cultural Preservation",
-      description: "Bridging technology and heritage conservation to protect our shared cultural legacy for future generations."
+      icon: Building,
+      title: "Infrastructure Safety",
+      description: "Bridging technology and civil engineering to ensure safe, reliable infrastructure for communities and economic development."
     }
   ];
 
   const impact = [
-    { number: "1000+", label: "Heritage Sites Analyzed" },
-    { number: "500K+", label: "Images Processed" },
+    { number: "10K+", label: "Infrastructure Elements Analyzed" },
+    { number: "1M+", label: "Images Processed" },
     { number: "95%", label: "Detection Accuracy" },
     { number: "24/7", label: "Monitoring Capability" }
   ];
@@ -52,10 +52,10 @@ const About = () => {
     <div className="content-area">
       <div className="page-header">
         <h1>
-          <BookOpen className="inline-icon" size={32} />
-          About Heritage Health Monitor
+          <Shield className="inline-icon" size={32} />
+          About InfraVision AI
         </h1>
-        <p>Learn about our mission to protect cultural heritage through AI technology</p>
+        <p>Revolutionizing infrastructure monitoring with advanced artificial intelligence and computer vision technology</p>
       </div>
 
       {/* Mission Section */}
@@ -69,13 +69,13 @@ const About = () => {
         <div className="card-body">
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
             <h3 style={{ color: 'var(--dark)', marginBottom: '1rem' }}>
-              Protecting Cultural Heritage Through Technology
+              Transforming Infrastructure Safety Through Intelligent Technology
             </h3>
             <p style={{ fontSize: '1.1rem', lineHeight: '1.6', color: 'var(--secondary)' }}>
-              The Heritage Health Monitor represents a revolutionary approach to cultural preservation.
-              By combining cutting-edge artificial intelligence with traditional conservation expertise,
-              we enable heritage site managers to monitor, assess, and protect historical structures
-              with unprecedented accuracy and efficiency.
+              InfraVision AI represents a revolutionary leap in infrastructure safety and monitoring.
+              By seamlessly integrating cutting-edge artificial intelligence with civil engineering expertise,
+              we empower infrastructure managers to monitor, assess, and maintain critical structures
+              with unprecedented accuracy, efficiency, and predictive capabilities.
             </p>
           </div>
 
@@ -293,7 +293,7 @@ const About = () => {
         <div className="card-body">
           <div style={{ textAlign: 'center' }}>
             <h3 style={{ color: 'var(--dark)', marginBottom: '1rem' }}>
-              A Future Where Technology Protects Our Heritage
+              A Future Where Technology Protects Our Infrastructure
             </h3>
             <p style={{
               fontSize: '1.1rem',
@@ -301,10 +301,10 @@ const About = () => {
               color: 'var(--secondary)',
               marginBottom: '2rem'
             }}>
-              We envision a world where every heritage site is equipped with intelligent monitoring systems
-              that can predict deterioration, prevent damage, and guide conservation efforts. By making
-              advanced AI technology accessible to heritage professionals worldwide, we aim to ensure
-              that our cultural heritage remains protected for future generations.
+              We envision a world where every critical infrastructure element is equipped with intelligent monitoring systems
+              that can predict deterioration, prevent catastrophic failures, and guide maintenance efforts. By making
+              advanced AI technology accessible to civil engineers and infrastructure professionals worldwide, we aim to ensure
+              that our infrastructure remains safe, reliable, and resilient for future generations.
             </p>
 
             <div style={{
@@ -324,7 +324,7 @@ const About = () => {
                 <Award size={32} style={{ color: 'var(--primary)', marginBottom: '0.5rem' }} />
                 <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--dark)' }}>Innovation</h4>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--secondary)' }}>
-                  Pushing the boundaries of AI in cultural preservation
+                  Pushing the boundaries of AI in infrastructure safety
                 </p>
               </div>
 
@@ -339,7 +339,7 @@ const About = () => {
                 <Globe size={32} style={{ color: 'var(--primary)', marginBottom: '0.5rem' }} />
                 <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--dark)' }}>Global Impact</h4>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--secondary)' }}>
-                  Protecting heritage sites worldwide
+                  Protecting infrastructure worldwide
                 </p>
               </div>
 
@@ -351,10 +351,10 @@ const About = () => {
                 border: '1px solid var(--glass-border)',
                 minWidth: '150px'
               }}>
-                <Heart size={32} style={{ color: 'var(--primary)', marginBottom: '0.5rem' }} />
-                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--dark)' }}>Preservation</h4>
+                <Wrench size={32} style={{ color: 'var(--primary)', marginBottom: '0.5rem' }} />
+                <h4 style={{ margin: '0 0 0.5rem 0', color: 'var(--dark)' }}>Safety First</h4>
                 <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--secondary)' }}>
-                  Safeguarding our cultural legacy
+                  Safeguarding our critical infrastructure
                 </p>
               </div>
             </div>

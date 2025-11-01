@@ -11,7 +11,7 @@ import About from './pages/About';
   
 
 function App() {
-  const [activeTab, setActiveTab] = useState('real-time');
+  const [activeTab, setActiveTab] = useState('video-analysis');
   const [systemStatus, setSystemStatus] = useState({
     backendConnected: false,
     lastAnalysis: null,
@@ -37,13 +37,12 @@ function App() {
   const routes = [
     { id: 'image-analysis', label: 'Image Analysis', Icon: Camera, Component: ImageAnalysis, description: 'AI-powered crack detection & material analysis' },
     { id: 'video-analysis', label: 'Video Analysis', Icon: Video, Component: VideoAnalysis, description: 'Real-time video monitoring & processing' },
-    { id: 'real-time', label: 'Real-time', Icon: Activity, Component: RealTimeMonitoring, description: 'Live monitoring dashboard' },
-    { id: 'analytics', label: 'Analytics', Icon: BarChart3, Component: Analytics, description: 'Comprehensive data insights' },
-    { id: 'about', label: 'About', Icon: Shield, Component: About, description: 'About our mission & technology' }
+    { id: 'analytics', label: 'Analytics', Icon: BarChart3, Component: Analytics, description: 'Comprehensive data insights & statistics' },
+    { id: 'about', label: 'About', Icon: Shield, Component: About, description: 'About our technology & methodology' }
   ];
 
   const features = [
-    { icon: Shield, title: 'AI-Powered Analysis', desc: 'Advanced ML models for heritage preservation' },
+    { icon: Shield, title: 'AI-Powered Analysis', desc: 'Advanced ML models for infrastructure assessment' },
     { icon: Eye, title: 'Real-time Monitoring', desc: 'Continuous surveillance & instant alerts' },
     { icon: Zap, title: 'Instant Insights', desc: 'Rapid assessment & actionable reports' }
   ];
@@ -57,10 +56,10 @@ function App() {
           <div className="hero-text">
             <h1 className="hero-title">
               <Shield className="hero-icon" size={48} />
-              Heritage Health Monitor
+              InfraVision AI
             </h1>
             <p className="hero-subtitle">
-              AI-Powered Preservation Technology for Cultural Heritage Sites
+              Intelligent Structural Health Monitoring & Advanced Infrastructure Analysis
             </p>
             <div className="hero-features">
               {features.map((feature, index) => (
@@ -159,8 +158,8 @@ function App() {
       <footer className="app-footer">
         <div className="footer-content">
           <div className="footer-section">
-            <h4>Heritage Health Monitor</h4>
-            <p>AI-powered preservation technology for cultural heritage sites worldwide.</p>
+            <h4>AI-Powered Structural Health Monitor</h4>
+            <p>Advanced AI technology for civil infrastructure health assessment and monitoring worldwide.</p>
             <div className="footer-links">
               <a href="#privacy">Privacy Policy</a>
               <a href="#terms">Terms of Service</a>
@@ -169,7 +168,7 @@ function App() {
           </div>
           <div className="footer-section">
             <h4>Technology</h4>
-            <p>Built with React, Python, and advanced AI/ML models for heritage preservation.</p>
+            <p>Built with React, Python, and advanced AI/ML models for structural health monitoring.</p>
             <div className="tech-stack">
               <span className="tech-badge">YOLOv8</span>
               <span className="tech-badge">OpenCV</span>
@@ -179,7 +178,7 @@ function App() {
           </div>
           <div className="footer-section">
             <h4>Connect</h4>
-            <p>Follow us for updates on heritage preservation technology.</p>
+            <p>Follow us for updates on structural health monitoring technology.</p>
             <div className="social-links">
               <a href="#github" className="social-link">GitHub</a>
               <a href="#linkedin" className="social-link">LinkedIn</a>
@@ -188,7 +187,7 @@ function App() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; 2024 Heritage Health Monitor. All rights reserved. | Powered by AI for Cultural Preservation</p>
+          <p>&copy; 2024 AI-Powered Structural Health Monitor. All rights reserved. | Powered by AI for Infrastructure Safety</p>
         </div>
       </footer>
     </div>

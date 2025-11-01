@@ -155,9 +155,9 @@ const RealTimeMonitoring = () => {
       <div className="page-header">
         <h1>
           <Activity className="inline-icon" size={32} />
-          Real-time Monitoring
+          Real-Time Infrastructure Monitoring
         </h1>
-        <p>Live camera feed with AI-powered analysis</p>
+        <p>Live camera feed with AI-powered structural health analysis and continuous monitoring</p>
       </div>
 
       <div className="monitoring-grid">

@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Camera, XCircle, Activity, Upload, FileVideo, RotateCcw, Download, Play, Pause } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, XCircle, Activity, Upload, FileVideo, RotateCcw, Download, Play, Pause, Video, Monitor } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const VideoAnalysis = () => {
@@ -9,10 +9,129 @@ const VideoAnalysis = () => {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [videoResults, setVideoResults] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isRealTime, setIsRealTime] = useState(false);
+  const [realTimeFrame, setRealTimeFrame] = useState(null);
+  const [realTimeResults, setRealTimeResults] = useState(null);
+  const [cameraConnected, setCameraConnected] = useState(false);
   const videoRef = useRef(null);
   const fileInputRef = useRef(null);
+  const realTimeIntervalRef = useRef(null);
 
   const API_URL = 'http://localhost:5002';
+
+  // Clean up real-time interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (realTimeIntervalRef.current) {
+        clearInterval(realTimeIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const connectCamera = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/connect_camera`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        setCameraConnected(true);
+        toast.success('Camera connected successfully');
+      } else {
+        const error = await response.json();
+        toast.error(`Failed to connect camera: ${error.error}`);
+      }
+    } catch (err) {
+      console.error('Camera connection error:', err);
+      toast.error('Failed to connect to camera. Make sure the API server is running.');
+    }
+  };
+
+  const disconnectCamera = async () => {
+    try {
+      if (realTimeIntervalRef.current) {
+        clearInterval(realTimeIntervalRef.current);
+        realTimeIntervalRef.current = null;
+      }
+
+      const response = await fetch(`${API_URL}/api/disconnect_camera`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        setCameraConnected(false);
+        setIsRealTime(false);
+        setRealTimeFrame(null);
+        setRealTimeResults(null);
+        toast.success('Camera disconnected');
+      } else {
+        const error = await response.json();
+        toast.error(`Failed to disconnect camera: ${error.error}`);
+      }
+    } catch (err) {
+      console.error('Camera disconnection error:', err);
+      toast.error('Failed to disconnect camera');
+    }
+  };
+
+  const startRealTimeCapture = async () => {
+    if (!cameraConnected) {
+      toast.error('Please connect camera first');
+      return;
+    }
+
+    try {
+      setIsRealTime(true);
+      toast.success('Starting real-time analysis...');
+
+      // Start capturing frames every 2 seconds
+      realTimeIntervalRef.current = setInterval(async () => {
+        try {
+          const response = await fetch(`${API_URL}/api/capture_and_analyze`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              px_to_cm_ratio: 0.1,
+              confidence_threshold: 0.3
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            setRealTimeFrame(data.frame);
+            setRealTimeResults(data.analysis);
+          } else {
+            const error = await response.json();
+            console.error('Real-time capture error:', error);
+          }
+        } catch (err) {
+          console.error('Real-time capture error:', err);
+        }
+      }, 2000); // Capture every 2 seconds
+
+    } catch (err) {
+      console.error('Real-time start error:', err);
+      toast.error('Failed to start real-time capture');
+      setIsRealTime(false);
+    }
+  };
+
+  const stopRealTimeCapture = () => {
+    if (realTimeIntervalRef.current) {
+      clearInterval(realTimeIntervalRef.current);
+      realTimeIntervalRef.current = null;
+    }
+    setIsRealTime(false);
+    toast.success('Real-time capture stopped');
+  };
 
   const handleVideoFileChange = (event) => {
     const selectedFile = event.target.files[0];
@@ -164,9 +283,9 @@ const VideoAnalysis = () => {
       <div className="page-header">
         <h1>
           <Camera className="inline-icon" size={32} />
-          Video Analysis
+          Video Stream Analysis
         </h1>
-        <p>Upload videos for comprehensive heritage site analysis</p>
+        <p>Upload videos for comprehensive structural health monitoring and infrastructure analysis</p>
       </div>
 
       {/* Video Upload Section */}
@@ -187,7 +306,7 @@ const VideoAnalysis = () => {
               </p>
               <p style={{ color: 'var(--secondary)', fontSize: '0.875rem' }}>
                 Comprehensive analysis including crack detection, biological growth,<br />
-                material classification, and environmental impact assessment
+                material classification, and structural integrity assessment
               </p>
               <input
                 ref={fileInputRef}
@@ -345,6 +464,176 @@ const VideoAnalysis = () => {
                   Analyze Another Video
                 </button>
               </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Real-Time Camera Analysis Section */}
+      <div className="card">
+        <div className="card-header">
+          <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <Monitor size={24} />
+            Real-Time Camera Analysis
+          </h2>
+        </div>
+        <div className="card-body">
+          {!cameraConnected && (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <Camera size={64} style={{ color: 'var(--primary)', marginBottom: '1rem' }} />
+              <h3 style={{ marginBottom: '0.5rem', color: 'var(--dark)' }}>Connect Camera for Real-Time Analysis</h3>
+              <p style={{ color: 'var(--secondary)', marginBottom: '2rem' }}>
+                Connect your camera to start real-time structural health monitoring
+              </p>
+              <button
+                className="btn-primary"
+                onClick={connectCamera}
+              >
+                <Camera size={20} style={{ marginRight: '0.5rem' }} />
+                Connect Camera
+              </button>
+            </div>
+          )}
+
+          {cameraConnected && !isRealTime && (
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+              <div style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                padding: '0.75rem 1.5rem', 
+                background: 'var(--success)', 
+                color: 'white', 
+                borderRadius: 'var(--border-radius)', 
+                marginBottom: '1.5rem' 
+              }}>
+                <Camera size={20} />
+                Camera Connected
+              </div>
+              <h3 style={{ marginBottom: '0.5rem', color: 'var(--dark)' }}>Start Real-Time Analysis</h3>
+              <p style={{ color: 'var(--secondary)', marginBottom: '2rem' }}>
+                Begin live monitoring and analysis of your infrastructure
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <button
+                  className="btn-primary"
+                  onClick={startRealTimeCapture}
+                >
+                  <Video size={20} style={{ marginRight: '0.5rem' }} />
+                  Start Real-Time
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={disconnectCamera}
+                >
+                  <XCircle size={18} style={{ marginRight: '0.5rem' }} />
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isRealTime && (
+            <div className="realtime-section">
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '1.5rem' 
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem', 
+                  padding: '0.5rem 1rem', 
+                  background: 'var(--danger)', 
+                  color: 'white', 
+                  borderRadius: 'var(--border-radius)' 
+                }}>
+                  <div style={{ 
+                    width: '8px', 
+                    height: '8px', 
+                    borderRadius: '50%', 
+                    background: 'white',
+                    animation: 'pulse 1s infinite' 
+                  }} />
+                  LIVE
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  onClick={stopRealTimeCapture}
+                >
+                  <Pause size={18} style={{ marginRight: '0.5rem' }} />
+                  Stop
+                </button>
+              </div>
+
+              {realTimeFrame && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <img
+                    src={realTimeFrame}
+                    alt="Real-time frame"
+                    style={{
+                      width: '100%',
+                      maxHeight: '400px',
+                      objectFit: 'contain',
+                      borderRadius: 'var(--border-radius)',
+                      border: '2px solid var(--primary)'
+                    }}
+                  />
+                </div>
+              )}
+
+              {realTimeResults && (
+                <div className="realtime-results">
+                  <h4 style={{ marginBottom: '1rem', color: 'var(--dark)' }}>Live Analysis Results</h4>
+                  <div className="metrics-grid">
+                    <div className="metric-card">
+                      <div className="metric-icon bg-danger">
+                        <Activity size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-title">Cracks Detected</div>
+                        <div className="metric-value">{realTimeResults.crack_detection?.count || 0}</div>
+                      </div>
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon bg-warning">
+                        <Activity size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-title">Growth Area</div>
+                        <div className="metric-value">{realTimeResults.biological_growth?.affected_area_cm2?.toFixed(1) || 0} cm²</div>
+                      </div>
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon bg-info">
+                        <Activity size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-title">Material</div>
+                        <div className="metric-value" style={{ fontSize: '0.875rem' }}>
+                          {realTimeResults.material_analysis?.predicted_material || 'Unknown'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="metric-card">
+                      <div className="metric-icon bg-success">
+                        <Activity size={24} />
+                      </div>
+                      <div className="metric-content">
+                        <div className="metric-title">Confidence</div>
+                        <div className="metric-value">
+                          {realTimeResults.material_analysis?.confidence ? 
+                            (realTimeResults.material_analysis.confidence * 100).toFixed(1) + '%' : 
+                            'N/A'
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
