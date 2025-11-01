@@ -128,7 +128,7 @@ const ImageAnalysis = () => {
       </div>
       <div className="metric-content">
         <div className="metric-title">{title}</div>
-        <div className="metric-value">{value}</div>
+        <div className="metric-value" style={{ fontSize: '0.95rem' }}>{value}</div>
         {subtitle && <div className="metric-subtitle">{subtitle}</div>}
       </div>
     </div>

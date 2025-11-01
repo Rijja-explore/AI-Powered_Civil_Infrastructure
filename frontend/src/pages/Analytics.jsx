@@ -4,6 +4,63 @@ import { Line, Pie, Bar, Area, Column, Scatter, Radar, DualAxes } from '@ant-des
 import toast from 'react-hot-toast';
 import { useAnalysis } from '../contexts/AnalysisContext';
 
+// Error Boundary Component for Charts
+class ChartErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Chart Error Boundary caught an error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="chart-error" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '8px',
+          color: '#dc2626',
+          fontSize: '0.875rem',
+          textAlign: 'center'
+        }}>
+          <AlertTriangle size={32} style={{ marginBottom: '1rem' }} />
+          <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Chart Error</div>
+          <div>Unable to render chart due to data issues</div>
+          <button 
+            onClick={() => this.setState({ hasError: false, error: null })}
+            style={{
+              marginTop: '1rem',
+              padding: '0.5rem 1rem',
+              background: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.75rem'
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 const Analytics = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -180,54 +237,47 @@ const Analytics = () => {
               <div className="panel-body">
                 {(() => {
                   try {
-                    const healthTrendData = [
-                      { date: 'Oct 25', health: 82.1, prediction: null, lower: 80.5, upper: 83.7 },
-                      { date: 'Oct 26', health: 83.4, prediction: null, lower: 81.8, upper: 85.0 },
-                      { date: 'Oct 27', health: 84.2, prediction: null, lower: 82.6, upper: 85.8 },
-                      { date: 'Oct 28', health: 85.0, prediction: null, lower: 83.4, upper: 86.6 },
-                      { date: 'Oct 29', health: 84.8, prediction: null, lower: 83.2, upper: 86.4 },
-                      { date: 'Oct 30', health: 85.3, prediction: null, lower: 83.7, upper: 86.9 },
-                      { date: 'Nov 01', health: insights.statistical_summary?.structural_health_score || 85.2, prediction: null, lower: 83.6, upper: 86.8 },
-                      { date: 'Nov 02', health: null, prediction: 84.8, lower: 83.0, upper: 86.6 },
-                      { date: 'Nov 03', health: null, prediction: 84.5, lower: 82.7, upper: 86.3 },
-                      { date: 'Nov 04', health: null, prediction: 84.1, lower: 82.3, upper: 85.9 }
+                    // transform to long format so a single Line with seriesField can be used
+                    const raw = [
+                      { date: 'Oct 25', health: 82.1, prediction: null },
+                      { date: 'Oct 26', health: 83.4, prediction: null },
+                      { date: 'Oct 27', health: 84.2, prediction: null },
+                      { date: 'Oct 28', health: 85.0, prediction: null },
+                      { date: 'Oct 29', health: 84.8, prediction: null },
+                      { date: 'Oct 30', health: 85.3, prediction: null },
+                      { date: 'Nov 01', health: insights.statistical_summary?.structural_health_score || 85.2, prediction: null },
+                      { date: 'Nov 02', health: null, prediction: 84.8 },
+                      { date: 'Nov 03', health: null, prediction: 84.5 },
+                      { date: 'Nov 04', health: null, prediction: 84.1 }
                     ];
-                    
+
+                    const healthTrendData = [];
+                    raw.forEach(item => {
+                      if (typeof item.health === 'number' && !isNaN(item.health)) {
+                        healthTrendData.push({ date: item.date, value: item.health, metric: 'Health' });
+                      }
+                      if (typeof item.prediction === 'number' && !isNaN(item.prediction)) {
+                        healthTrendData.push({ date: item.date, value: item.prediction, metric: 'Prediction' });
+                      }
+                    });
+
+                    if (!Array.isArray(healthTrendData) || healthTrendData.length === 0) {
+                      return <div className="chart-error">Insufficient data for chart</div>;
+                    }
+
                     const config = {
                       data: healthTrendData,
                       xField: 'date',
-                      children: [
-                        {
-                          type: 'line',
-                          yField: 'health',
-                          color: '#10b981',
-                          style: { lineWidth: 3 },
-                          point: { size: 6, shape: 'circle' }
-                        },
-                        {
-                          type: 'line',
-                          yField: 'prediction',
-                          color: '#3b82f6',
-                          style: { lineWidth: 3, lineDash: [8, 4] },
-                          point: { size: 6, shape: 'circle' }
-                        }
-                      ],
-                      xAxis: {
-                        label: { style: { fontSize: 12, fill: '#64748b', fontFamily: 'Inter, sans-serif' } },
-                        grid: { line: { style: { stroke: '#e2e8f0', lineDash: [2, 2] } } }
-                      },
-                      yAxis: {
-                        min: 75,
-                        max: 90,
-                        label: { 
-                          formatter: (v) => `${v}%`,
-                          style: { fontSize: 12, fill: '#64748b', fontFamily: 'Inter, sans-serif' }
-                        },
-                        grid: { line: { style: { stroke: '#e2e8f0', lineDash: [2, 2] } } }
-                      }
+                      yField: 'value',
+                      seriesField: 'metric',
+                      smooth: true,
+                      color: ['#10b981', '#3b82f6'],
+                      point: { size: 4 },
+                      xAxis: { label: { style: { fontSize: 11, fill: '#64748b' } } },
+                      yAxis: { label: { formatter: v => `${v}%`, style: { fontSize: 11, fill: '#64748b' } }, min: 75, max: 90 }
                     };
-                    
-                    return <DualAxes {...config} />;
+
+                    return <Line {...config} />;
                   } catch (error) {
                     console.error('Error rendering Structural Health Trend chart:', error);
                     return <div className="chart-error">Chart temporarily unavailable</div>;
@@ -256,7 +306,12 @@ const Analytics = () => {
                       { category: 'Environmental', score: (envData.sustainability_score ? envData.sustainability_score * 10 : 78) },
                       { category: 'Maintenance', score: 100 - (insights.statistical_summary?.deterioration_index || 15) },
                       { category: 'Safety', score: Math.max(50, 90 - (crackData.count || 8) * 2) }
-                    ];
+                    ].filter(item => typeof item.score === 'number' && !isNaN(item.score));
+                    
+                    // Ensure we have valid data
+                    if (!Array.isArray(riskData) || riskData.length === 0) {
+                      return <div className="chart-error">Insufficient data for chart</div>;
+                    }
                     
                     const config = {
                       data: riskData,
@@ -400,7 +455,7 @@ const Analytics = () => {
                           '#BB8FCE', // Light Purple
                           '#85C1E9'  // Light Blue
                         ][index % 8]
-                      })) : [
+                      })).filter(item => typeof item.confidence === 'number' && !isNaN(item.confidence)) : [
                         { material: 'Concrete', confidence: 87.5, color: '#FF6B6B' },
                         { material: 'Steel', confidence: 76.2, color: '#4ECDC4' },
                         { material: 'Brick', confidence: 64.8, color: '#45B7D1' },
@@ -409,6 +464,11 @@ const Analytics = () => {
                         { material: 'Plastic', confidence: 38.2, color: '#F7DC6F' }
                       ];
 
+                    // Ensure we have valid data
+                    if (!Array.isArray(materialConfData) || materialConfData.length === 0) {
+                      return <div className="chart-error">Insufficient data for chart</div>;
+                    }
+                    
                     const config = {
                       data: materialConfData,
                       xField: 'material',
@@ -511,13 +571,22 @@ const Analytics = () => {
                         width: crack.width_cm || Math.random() * 4 + 1,
                         severity: crack.severity || ['Minor', 'Moderate', 'Severe', 'Critical'][Math.floor(Math.random() * 4)],
                         area: (crack.length_cm || Math.random() * 40 + 10) * (crack.width_cm || Math.random() * 4 + 1)
-                      })) : [
+                      })).filter(item => 
+                        typeof item.length === 'number' && !isNaN(item.length) &&
+                        typeof item.width === 'number' && !isNaN(item.width) &&
+                        typeof item.area === 'number' && !isNaN(item.area)
+                      ) : [
                         { id: 'C1', length: 32.4, width: 2.8, severity: 'Critical', area: 90.7 },
                         { id: 'C2', length: 18.7, width: 1.5, severity: 'Moderate', area: 28.1 },
                         { id: 'C3', length: 45.2, width: 3.2, severity: 'Severe', area: 144.6 },
                         { id: 'C4', length: 12.1, width: 0.9, severity: 'Minor', area: 10.9 },
                         { id: 'C5', length: 28.5, width: 2.1, severity: 'Moderate', area: 59.9 }
                       ];
+                    
+                    // Ensure we have valid data
+                    if (!Array.isArray(crackSizeData) || crackSizeData.length === 0) {
+                      return <div className="chart-error">Insufficient data for chart</div>;
+                    }
                     
                     const config = {
                       data: crackSizeData,
@@ -663,48 +732,34 @@ const Analytics = () => {
                       { month: '3M', health: 83.5, cost: 4800 },
                       { month: '6M', health: 81.2, cost: insights.predictive_analytics?.expected_maintenance_cost || 7500 },
                       { month: '12M', health: 78.5, cost: 15600 }
-                    ];
-                    
+                    ].filter(item => 
+                      typeof item.health === 'number' && !isNaN(item.health) &&
+                      typeof item.cost === 'number' && !isNaN(item.cost)
+                    );
+
+                    if (!Array.isArray(predictionData) || predictionData.length === 0) {
+                      return <div className="chart-error">Insufficient data for chart</div>;
+                    }
+
+                    // DualAxes expects data as an array of two datasets and yField as an array
+                    const healthSeries = predictionData.map(d => ({ month: d.month, health: d.health }));
+                    const costSeries = predictionData.map(d => ({ month: d.month, cost: d.cost }));
+
                     const config = {
-                      data: predictionData,
+                      data: [healthSeries, costSeries],
                       xField: 'month',
-                      children: [
-                        {
-                          type: 'line',
-                          yField: 'health',
-                          color: '#ef4444',
-                          style: { lineWidth: 3 },
-                          point: { size: 8, shape: 'circle' }
-                        },
-                        {
-                          type: 'column',
-                          yField: 'cost',
-                          color: '#3b82f6',
-                          style: { radius: [4, 4, 0, 0] }
-                        }
+                      yField: ['health', 'cost'],
+                      geometryOptions: [
+                        { geometry: 'line', seriesField: undefined, smooth: true, color: '#ef4444', lineStyle: { lineWidth: 3 } },
+                        { geometry: 'column', color: '#3b82f6', columnStyle: { radius: [4, 4, 0, 0] } }
                       ],
-                      xAxis: {
-                        label: { style: { fontSize: 12, fill: '#64748b', fontFamily: 'Inter, sans-serif' } }
-                      },
+                      xAxis: { label: { style: { fontSize: 11, fill: '#64748b' } } },
                       yAxis: {
-                        health: {
-                          min: 70,
-                          max: 90,
-                          label: { 
-                            formatter: (v) => `${v}%`,
-                            style: { fontSize: 12, fill: '#64748b', fontFamily: 'Inter, sans-serif' }
-                          }
-                        },
-                        cost: {
-                          min: 0,
-                          label: { 
-                            formatter: (v) => `$${v/1000}K`,
-                            style: { fontSize: 12, fill: '#64748b', fontFamily: 'Inter, sans-serif' }
-                          }
-                        }
+                        health: { min: 70, max: 90, label: { formatter: v => `${v}%`, style: { fontSize: 11 } } },
+                        cost: { min: 0, label: { formatter: v => `$${v/1000}K`, style: { fontSize: 11 } } }
                       }
                     };
-                    
+
                     return <DualAxes {...config} />;
                   } catch (error) {
                     console.error('Error rendering Predictive Analytics chart:', error);
@@ -729,49 +784,30 @@ const Analytics = () => {
                 {(() => {
                   try {
                     const envImpactData = [
-                      { 
-                        category: 'Carbon Footprint',
-                        current: envData.carbon_footprint_kg || 320.5,
-                        target: 250
-                      },
-                      { 
-                        category: 'Water Usage',
-                        current: envData.water_footprint_liters || 1250,
-                        target: 1000
-                      },
-                      { 
-                        category: 'Energy Consumption',
-                        current: envData.energy_consumption_kwh || 850,
-                        target: 700
-                      }
-                    ];
-                    
+                      { category: 'Carbon Footprint', current: envData.carbon_footprint_kg || 320.5, target: 250 },
+                      { category: 'Water Usage', current: envData.water_footprint_liters || 1250, target: 1000 },
+                      { category: 'Energy Consumption', current: envData.energy_consumption_kwh || 850, target: 700 }
+                    ].filter(item => typeof item.current === 'number' && !isNaN(item.current) && typeof item.target === 'number' && !isNaN(item.target));
+
+                    if (!Array.isArray(envImpactData) || envImpactData.length === 0) {
+                      return <div className="chart-error">Insufficient data for chart</div>;
+                    }
+
+                    const currentSeries = envImpactData.map(d => ({ category: d.category, value: d.current }));
+                    const targetSeries = envImpactData.map(d => ({ category: d.category, value: d.target }));
+
                     const config = {
-                      data: envImpactData,
+                      data: [currentSeries, targetSeries],
                       xField: 'category',
-                      children: [
-                        {
-                          type: 'column',
-                          yField: 'current',
-                          color: '#ef4444',
-                          style: { radius: [4, 4, 0, 0] }
-                        },
-                        {
-                          type: 'column',
-                          yField: 'target',
-                          color: '#10b981',
-                          style: { radius: [4, 4, 0, 0] }
-                        }
+                      yField: ['value', 'value'],
+                      geometryOptions: [
+                        { geometry: 'column', color: '#ef4444', columnStyle: { radius: [4, 4, 0, 0] } },
+                        { geometry: 'column', color: '#10b981', columnStyle: { radius: [4, 4, 0, 0] } }
                       ],
-                      xAxis: {
-                        label: { style: { fontSize: 11, fill: '#64748b', fontFamily: 'Inter, sans-serif' } }
-                      },
-                      yAxis: {
-                        label: { style: { fontSize: 11, fill: '#64748b', fontFamily: 'Inter, sans-serif' } },
-                        grid: { line: { style: { stroke: '#e2e8f0', lineDash: [2, 2] } } }
-                      }
+                      xAxis: { label: { style: { fontSize: 11, fill: '#64748b' } } },
+                      yAxis: { label: { style: { fontSize: 11, fill: '#64748b' } }, grid: { line: { style: { stroke: '#e2e8f0', lineDash: [2, 2] } } } }
                     };
-                    
+
                     return <DualAxes {...config} />;
                   } catch (error) {
                     console.error('Error rendering Environmental Impact chart:', error);
@@ -836,6 +872,11 @@ const Analytics = () => {
             <div className="card-body">
               {(() => {
                 try {
+                  // Ensure data.trends is valid
+                  if (!Array.isArray(data.trends) || data.trends.length === 0) {
+                    return <div className="chart-error">No trend data available</div>;
+                  }
+                  
                   return (
                     <Line 
                       data={data.trends}
@@ -877,6 +918,11 @@ const Analytics = () => {
             <div className="card-body">
               {(() => {
                 try {
+                  // Ensure data.severityDistribution is valid
+                  if (!Array.isArray(data.severityDistribution) || data.severityDistribution.length === 0) {
+                    return <div className="chart-error">No severity data available</div>;
+                  }
+                  
                   return (
                     <Pie 
                       data={data.severityDistribution}
@@ -923,6 +969,11 @@ const Analytics = () => {
             <div className="card-body">
               {(() => {
                 try {
+                  // Ensure data.materialDistribution is valid
+                  if (!Array.isArray(data.materialDistribution) || data.materialDistribution.length === 0) {
+                    return <div className="chart-error">No material data available</div>;
+                  }
+                  
                   return (
                     <Bar 
                       data={data.materialDistribution}
@@ -982,7 +1033,9 @@ const Analytics = () => {
               <p>Loading analytics data...</p>
             </div>
           ) : data ? (
-            renderChart()
+            <ChartErrorBoundary>
+              {renderChart()}
+            </ChartErrorBoundary>
           ) : (
             <div className="no-data-state">
               <div style={{ textAlign: 'center', padding: '4rem 2rem' }}>
