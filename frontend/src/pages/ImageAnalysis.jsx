@@ -4,30 +4,15 @@ import { useAnalysis } from '../contexts/AnalysisContext';
 import { Camera, Upload, Play, Loader, PieChart, Target, Activity, TrendingUp, CheckCircle, AlertTriangle, BarChart3, Wind, Droplet, Zap, Leaf, Download } from 'lucide-react';
 
 const ImageAnalysis = () => {
-  const [file, setFile] = useState(() => {
-    // Restore file info from sessionStorage
-    const savedFile = sessionStorage.getItem('uploadedFile');
-    return savedFile ? JSON.parse(savedFile) : null;
-  });
-  const [preview, setPreview] = useState(() => {
-    // Restore preview from sessionStorage
-    return sessionStorage.getItem('uploadedPreview') || null;
-  });
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState(() => {
-    // Restore results from sessionStorage
-    const savedResults = sessionStorage.getItem('analysisResults');
-    return savedResults ? JSON.parse(savedResults) : null;
-  });
+  const [results, setResults] = useState(null);
   const [error, setError] = useState(null);
-  const [outputImages, setOutputImages] = useState(() => {
-    // Restore output images from sessionStorage
-    const savedImages = sessionStorage.getItem('outputImages');
-    return savedImages ? JSON.parse(savedImages) : null;
-  });
+  const [outputImages, setOutputImages] = useState(null);
   const fileInputRef = useRef(null);
-  const { updateAnalysis } = useAnalysis();
+  const { updateAnalysis, clearAnalysis } = useAnalysis();
   
   const [settings, setSettings] = useState({
     confidenceThreshold: 0.3,
@@ -40,25 +25,9 @@ const ImageAnalysis = () => {
     const selectedFile = event.target.files[0];
     if (selectedFile) {
       setFile(selectedFile);
-      
-      // Save file info to sessionStorage (without the actual File object)
-      const fileInfo = {
-        name: selectedFile.name,
-        size: selectedFile.size,
-        type: selectedFile.type,
-        lastModified: selectedFile.lastModified
-      };
-      sessionStorage.setItem('uploadedFile', JSON.stringify(fileInfo));
-      
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-        // Save preview to sessionStorage
-        sessionStorage.setItem('uploadedPreview', reader.result);
-      };
+      reader.onloadend = () => setPreview(reader.result);
       reader.readAsDataURL(selectedFile);
-      
-      // Clear previous results but don't remove from sessionStorage yet
       setResults(null);
       setOutputImages(null);
       setError(null);
@@ -110,11 +79,6 @@ const ImageAnalysis = () => {
       const data = await response.json();
       setResults(data.results);
       setOutputImages(data.output_images);
-      
-      // Save results and images to sessionStorage for persistence
-      sessionStorage.setItem('analysisResults', JSON.stringify(data.results));
-      sessionStorage.setItem('outputImages', JSON.stringify(data.output_images));
-      
       updateAnalysis(data.results); // Store in context for persistence
       setProgress(100);
       setLoading(false);
@@ -182,81 +146,102 @@ const ImageAnalysis = () => {
 
   // Material Confidence Chart Component
   const MaterialConfidenceChart = ({ materialData }) => {
-    if (!materialData || !materialData.probabilities) return null;
+    if (!materialData || !materialData.probabilities || typeof materialData.probabilities !== 'object') {
+      return null;
+    }
 
-    const materials = Object.keys(materialData.probabilities);
-    const probabilities = Object.values(materialData.probabilities);
+    try {
+      const materials = Object.keys(materialData.probabilities);
+      const probabilities = Object.values(materialData.probabilities);
 
-    // Define colors for different materials
-    const materialColors = {
-      'concrete': '#60a5fa',
-      'steel': '#ef4444',
-      'brick': '#f59e0b',
-      'wood': '#10b981',
-      'glass': '#8b5cf6',
-      'stone': '#6b7280',
-      'asphalt': '#374151',
-      'plastic': '#ec4899'
-    };
-
-    // Prepare data for bar chart with null checks
-    const chartData = materials
-      .filter(material => material && typeof material === 'string') // Filter out null/undefined materials
-      .map((material, index) => ({
-        material: material.charAt(0).toUpperCase() + material.slice(1), // Capitalize first letter
-        confidence: probabilities[index] * 100,
-        color: materialColors[material.toLowerCase()] || '#60a5fa'
-      }));
-
-    // If no valid data, don't render the chart
-    if (chartData.length === 0) return null;
-
-    const config = {
-      data: chartData,
-      xField: 'material',
-      yField: 'confidence',
-      colorField: 'material',
-      color: ({ material }) => {
-        if (!material || typeof material !== 'string') return '#60a5fa';
-        return materialColors[material.toLowerCase()] || '#60a5fa';
-      },
-      label: {
-        position: 'middle',
-        style: {
-          fill: '#FFFFFF',
-          opacity: 0.8,
-          fontSize: 12,
-          fontWeight: 500
-        }
-      },
-      xAxis: {
-        label: {
-          style: {
-            fill: '#64748b',
-            fontSize: 12
-          }
-        }
-      },
-      yAxis: {
-        label: {
-          formatter: (v) => `${v}%`,
-          style: {
-            fill: '#64748b',
-            fontSize: 12
-          }
-        }
+      // Ensure we have valid arrays
+      if (!Array.isArray(materials) || !Array.isArray(probabilities) || materials.length === 0) {
+        return null;
       }
-    };
 
-    return (
-      <div className="material-confidence-chart" style={{ marginTop: '2rem' }}>
-        <h6 style={{ marginBottom: '1rem', fontWeight: 700, color: 'var(--dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Target size={18} />
-          Material Confidence Analysis
-        </h6>
-        <Bar {...config} />
-      </div>
-    );
+      // Define colors for different materials
+      const materialColors = {
+        'concrete': '#60a5fa',
+        'steel': '#ef4444',
+        'brick': '#f59e0b',
+        'wood': '#10b981',
+        'glass': '#8b5cf6',
+        'stone': '#6b7280',
+        'asphalt': '#374151',
+        'plastic': '#ec4899'
+      };
+
+      // Prepare data for bar chart with comprehensive validation
+      const chartData = materials
+        .filter(material => material && typeof material === 'string' && material.trim() !== '') // Filter out null/undefined/empty materials
+        .map((material, index) => {
+          const confidence = probabilities[index];
+          if (typeof confidence !== 'number' || isNaN(confidence)) {
+            return null; // Skip invalid confidence values
+          }
+          return {
+            material: material.charAt(0).toUpperCase() + material.slice(1), // Capitalize first letter
+            confidence: Math.max(0, Math.min(100, confidence * 100)), // Ensure confidence is between 0-100
+            color: materialColors[material.toLowerCase()] || '#60a5fa'
+          };
+        })
+        .filter(item => item !== null); // Remove any null entries
+
+      // If no valid data after filtering, don't render the chart
+      if (!chartData || chartData.length === 0) {
+        return null;
+      }
+
+      const config = {
+        data: chartData,
+        xField: 'material',
+        yField: 'confidence',
+        colorField: 'color', // Use the color field directly
+        label: {
+          position: 'middle',
+          style: {
+            fill: '#FFFFFF',
+            opacity: 0.8,
+            fontSize: 12,
+            fontWeight: 500
+          },
+          formatter: (datum) => `${datum.confidence?.toFixed(1) || 0}%`
+        },
+        xAxis: {
+          label: {
+            style: {
+              fill: '#64748b',
+              fontSize: 12
+            }
+          }
+        },
+        yAxis: {
+          label: {
+            formatter: (v) => `${v}%`,
+            style: {
+              fill: '#64748b',
+              fontSize: 12
+            }
+          }
+        },
+        barStyle: {
+          radius: [4, 4, 0, 0]
+        }
+      };
+
+      return (
+        <div className="material-confidence-chart" style={{ marginTop: '2rem' }}>
+          <h6 style={{ marginBottom: '1rem', fontWeight: 700, color: 'var(--dark)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Target size={18} />
+            Material Confidence Analysis
+          </h6>
+          <Bar {...config} />
+        </div>
+      );
+    } catch (error) {
+      console.error('Error rendering Material Confidence Chart:', error);
+      return null;
+    }
   };
 
   return (
@@ -783,57 +768,16 @@ const ImageAnalysis = () => {
                 <button
                   className="btn-primary"
                   onClick={() => {
-                    // Clear all stored data from sessionStorage
-                    sessionStorage.removeItem('uploadedFile');
-                    sessionStorage.removeItem('uploadedPreview');
-                    sessionStorage.removeItem('analysisResults');
-                    sessionStorage.removeItem('outputImages');
-                    
-                    // Reset component state
                     setFile(null);
                     setPreview(null);
                     setResults(null);
                     setOutputImages(null);
                     setError(null);
-                    setProgress(0);
+                    clearAnalysis(); // Clear from context as well
                   }}
                 >
                   <Upload size={18} style={{ marginRight: '0.5rem' }} />
                   Analyze Another Image
-                </button>
-                
-                {/* Add Clear Analysis Button */}
-                <button
-                  className="btn-secondary"
-                  onClick={() => {
-                    // Clear all stored data from sessionStorage
-                    sessionStorage.removeItem('uploadedFile');
-                    sessionStorage.removeItem('uploadedPreview');
-                    sessionStorage.removeItem('analysisResults');
-                    sessionStorage.removeItem('outputImages');
-                    
-                    // Reset component state
-                    setFile(null);
-                    setPreview(null);
-                    setResults(null);
-                    setOutputImages(null);
-                    setError(null);
-                    setProgress(0);
-                  }}
-                  style={{ 
-                    background: 'var(--secondary)',
-                    color: 'white',
-                    border: 'none',
-                    padding: '0.75rem 1.5rem',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  <AlertTriangle size={18} style={{ marginRight: '0.5rem' }} />
-                  Clear Analysis
                 </button>
               </div>
             </div>
