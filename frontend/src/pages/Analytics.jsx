@@ -343,251 +343,8 @@ const Analytics = () => {
             gap: '2.5rem',
             marginTop: '2rem'
           }}>
-            {/* Enhanced Structural Health Trend Analysis */}
-            <div className="enhanced-panel" style={{ 
-              width: '100%',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08))',
-              border: '2px solid rgba(16, 185, 129, 0.25)'
-            }}>
-              <div className="premium-header">
-                <div className="header-content">
-                  <h3 className="enhanced-chart-title">
-                    <LineChart size={26} className="chart-icon" />
-                    Advanced Structural Health Trend Analysis
-                  </h3>
-                  <p className="enhanced-description">Real-time monitoring with predictive analytics and machine learning forecasting</p>
-                  <div className="chart-metadata">
-                    <span className="data-source">Data Source: IoT Sensors & Computer Vision</span>
-                    <span className="analysis-method">Method: Time Series Analysis + LSTM Neural Networks</span>
-                  </div>
-                </div>
-                <div className="chart-controls">
-                  <span className="control-btn active">7D</span>
-                  <span className="control-btn">30D</span>
-                  <span className="control-btn">90D</span>
-                </div>
-              </div>
-              <div className="panel-body">
-                {(() => {
-                  try {
-                    // Use dynamic health trend data from predictive analytics
-                    const rawTrendData = healthTrendData.length > 0 ? healthTrendData : [];
-                    
-                    if (rawTrendData.length === 0) {
-                      return <div className="enhanced-error">No trend data available. Please analyze an image first.</div>;
-                    }
 
-                    const healthTrendChartData = [];
-                    rawTrendData.forEach(item => {
-                      // Add all three metrics from the data - properly extract values
-                      const structuralHealth = typeof item['Structural Health'] === 'number' ? item['Structural Health'] : (item.value || 85);
-                      const systemPerformance = typeof item['System Performance'] === 'number' ? item['System Performance'] : (structuralHealth - 5);
-                      const maintenanceIndex = typeof item['Maintenance Index'] === 'number' ? item['Maintenance Index'] : (structuralHealth + 2);
-                      
-                      healthTrendChartData.push({ date: item.month, value: structuralHealth, metric: 'Structural Health' });
-                      healthTrendChartData.push({ date: item.month, value: systemPerformance, metric: 'System Performance' });
-                      healthTrendChartData.push({ date: item.month, value: maintenanceIndex, metric: 'Maintenance Index' });
-                    });
-
-                    if (!Array.isArray(healthTrendChartData) || healthTrendChartData.length === 0) {
-                      return <div className="enhanced-error">Insufficient data for trend analysis</div>;
-                    }
-
-                    const config = {
-                      data: healthTrendChartData,
-                      xField: 'date',
-                      yField: 'value',
-                      seriesField: 'metric',
-                      smooth: true,
-                      color: ['#10b981', '#3b82f6', '#8b5cf6'],
-                      point: { 
-                        size: 10, 
-                        style: { 
-                          stroke: '#ffffff', 
-                          lineWidth: 3,
-                          shadowBlur: 10,
-                          shadowColor: 'rgba(16, 185, 129, 0.5)',
-                          cursor: 'pointer'
-                        } 
-                      },
-                      interactions: [
-                        { type: 'tooltip' },
-                        { type: 'active-region' }
-                      ],
-                      lineStyle: { 
-                        lineWidth: 4,
-                        shadowBlur: 15,
-                        shadowColor: 'rgba(16, 185, 129, 0.3)'
-                      },
-                      animation: {
-                        appear: {
-                          animation: 'fade-in',
-                          duration: 1500,
-                        },
-                      },
-                      xAxis: { 
-                        label: { 
-                          style: { 
-                            fontSize: 14, 
-                            fill: '#ffffff', 
-                            fontWeight: 700,
-                            fontFamily: 'Inter, sans-serif'
-                          } 
-                        },
-                        title: {
-                          text: 'Time Period',
-                          style: { 
-                            fontSize: 16, 
-                            fill: '#ffffff', 
-                            fontWeight: 700,
-                            fontFamily: 'Inter, sans-serif'
-                          }
-                        },
-                        grid: { line: { style: { stroke: 'rgba(255,255,255,0.15)', lineDash: [4, 4] } } }
-                      },
-                      yAxis: { 
-                        label: { 
-                          formatter: v => `${typeof v === 'number' ? v.toFixed(1) : v}%`, 
-                          style: { 
-                            fontSize: 14, 
-                            fill: '#ffffff', 
-                            fontWeight: 700,
-                            fontFamily: 'Inter, sans-serif'
-                          } 
-                        },
-                        title: {
-                          text: 'Health Score (%)',
-                          style: { 
-                            fontSize: 16, 
-                            fill: '#ffffff', 
-                            fontWeight: 700,
-                            fontFamily: 'Inter, sans-serif'
-                          }
-                        },
-                        min: Math.min(...healthTrendData.map(d => d.value)) - 2, 
-                        max: Math.max(...healthTrendData.map(d => d.value)) + 2, 
-                        grid: { line: { style: { stroke: 'rgba(255,255,255,0.15)', lineDash: [4, 4] } } } 
-                      },
-                      legend: {
-                        position: 'top-right',
-                        itemName: { 
-                          style: { 
-                            fill: '#ffffff', 
-                            fontSize: 14, 
-                            fontWeight: 700,
-                            fontFamily: 'Inter, sans-serif'
-                          } 
-                        },
-                        marker: {
-                          style: {
-                            r: 8
-                          }
-                        }
-                      },
-                      tooltip: {
-                        showTitle: true,
-                        showMarkers: true,
-                        showCrosshairs: true,
-                        crosshairs: {
-                          type: 'xy',
-                          line: {
-                            style: {
-                              stroke: '#ffffff',
-                              lineWidth: 1,
-                              lineDash: [4, 4]
-                            }
-                          }
-                        },
-                        marker: {
-                          lineWidth: 2,
-                          stroke: '#ffffff'
-                        },
-                        customContent: (title, items) => {
-                          if (!items || items.length === 0) return null;
-                          return `
-                            <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.95), rgba(6, 95, 70, 0.95)); border: 2px solid rgba(16, 185, 129, 0.5); border-radius: 14px; padding: 1.5rem; backdrop-filter: blur(20px); box-shadow: 0 12px 40px rgba(0,0,0,0.7);">
-                              <div style="color: #ffffff; font-weight: 900; margin-bottom: 1.25rem; font-family: Inter, sans-serif; font-size: 16px; border-bottom: 2px solid rgba(255,255,255,0.3); padding-bottom: 0.75rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${title}</div>
-                              ${items.map(item => `
-                                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; padding: 0.75rem; background: rgba(0,0,0,0.3); border-radius: 8px;">
-                                  <span style="width: 16px; height: 16px; background: ${item.color}; border-radius: 50%; display: inline-block; box-shadow: 0 0 12px ${item.color}; border: 2px solid #ffffff;"></span>
-                                  <span style="color: #ffffff; font-family: Inter, sans-serif; font-size: 15px; font-weight: 600; flex: 1;">${item.name}:</span>
-                                  <span style="color: #ffffff; font-weight: 900; font-family: Inter, sans-serif; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">${item.value}%</span>
-                                </div>
-                              `).join('')}
-                            </div>
-                          `;
-                        }
-                      },
-                      tooltip: {
-                        customContent: (title, items) => {
-                          if (!items || items.length === 0) return null;
-                          return `
-                            <div style="background: rgba(15, 23, 42, 0.95); border: 2px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 1rem; backdrop-filter: blur(20px);">
-                              <div style="color: #ffffff; font-weight: 700; margin-bottom: 0.5rem; font-family: Inter, sans-serif;">${title}</div>
-                              ${items.map(item => `
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                                  <span style="width: 12px; height: 12px; background: ${item.color}; border-radius: 50%; display: inline-block;"></span>
-                                  <span style="color: rgba(255,255,255,0.9); font-family: Inter, sans-serif;">${item.name}:</span>
-                                  <span style="color: #ffffff; font-weight: 700; font-family: Inter, sans-serif;">${item.value}%</span>
-                                </div>
-                              `).join('')}
-                            </div>
-                          `;
-                        }
-                      }
-                    };
-
-                    return (
-                      <div className="chart-container-with-insights">
-                        <div className="chart-main">
-                          <Line {...config} />
-                        </div>
-                        <div className="chart-insights">
-                          <h4>Trend Analysis Summary</h4>
-                          <div className="insight-row">
-                            <div className="insight-color" style={{ backgroundColor: '#10b981' }}></div>
-                            <span className="insight-label">Current Health</span>
-                            <span className="insight-value">{baseHealth.toFixed(1)}%</span>
-                            <span className="insight-risk" style={{ color: '#10b981' }}>Good</span>
-                          </div>
-                          <div className="insight-row">
-                            <div className="insight-color" style={{ backgroundColor: '#8b5cf6' }}></div>
-                            <span className="insight-label">ML Forecast</span>
-                            <span className="insight-value">{(baseHealth - 0.7).toFixed(1)}%</span>
-                            <span className="insight-risk" style={{ color: '#f59e0b' }}>Monitor</span>
-                          </div>
-                          <div className="insight-row">
-                            <div className="insight-color" style={{ backgroundColor: '#3b82f6' }}></div>
-                            <span className="insight-label">Trend Direction</span>
-                            <span className="insight-value">↘ Declining</span>
-                            <span className="insight-risk" style={{ color: '#ef4444' }}>Alert</span>
-                          </div>
-                          <div style={{ 
-                            marginTop: '1rem', 
-                            padding: '0.75rem', 
-                            background: 'rgba(245, 158, 11, 0.15)', 
-                            borderRadius: '8px',
-                            border: '1px solid rgba(245, 158, 11, 0.3)'
-                          }}>
-                            <div style={{ fontSize: '0.85rem', color: '#f59e0b', fontWeight: 700, marginBottom: '0.25rem' }}>
-                              Recommendation
-                            </div>
-                            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)', lineHeight: '1.4' }}>
-                              Schedule preventive maintenance within 2-3 weeks to prevent further degradation.
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  } catch (error) {
-                    console.error('Error rendering Structural Health Trend chart:', error);
-                    return <div className="enhanced-error">Chart temporarily unavailable</div>;
-                  }
-                })()}
-              </div>
-            </div>
-
-            {/* Enhanced Risk Assessment Matrix */}
+            {/* Enhanced Risk Assessment Matrix - Graph Left, Content Right */}
             <div className="enhanced-panel" style={{ 
               width: '100%',
               background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08))',
@@ -595,7 +352,7 @@ const Analytics = () => {
               minHeight: '800px',
               padding: '2.5rem'
             }}>
-              <div className="premium-header">
+              <div className="premium-header" style={{ marginBottom: '2rem' }}>
                 <div className="header-content">
                   <h3 className="enhanced-chart-title">
                     <Target size={24} className="chart-icon" />
@@ -608,7 +365,7 @@ const Analytics = () => {
                   </div>
                 </div>
               </div>
-              <div className="panel-body">
+              <div className="panel-body" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'stretch' }}>
                 {(() => {
                   try {
                     // Use dynamic risk assessment data from ANOVA analysis
@@ -736,12 +493,12 @@ const Analytics = () => {
                     };
                     
                     return (
-                      <div className="chart-container-with-insights">
-                        <div className="chart-main">
+                      <>
+                        <div style={{ minHeight: '500px' }}>
                           <Radar {...config} />
                         </div>
-                        <div className="chart-insights">
-                          <h4>Risk Matrix Summary</h4>
+                        <div className="chart-insights" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+                          <h4 style={{ marginTop: 0 }}>Risk Matrix Summary</h4>
                           {riskData.slice(0, 3).map((risk, index) => (
                             <div className="insight-row" key={index}>
                               <div className="insight-color" style={{ backgroundColor: risk.color }}></div>
@@ -773,7 +530,7 @@ const Analytics = () => {
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </>
                     );
                   } catch (error) {
                     console.error('Error rendering Risk Assessment chart:', error);
@@ -804,7 +561,7 @@ const Analytics = () => {
                   </div>
                 </div>
               </div>
-              <div className="panel-body">
+              <div className="panel-body" style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'start' }}>
                 {(() => {
                   // Use dynamic severity distribution data from frequency analysis
                   const severityChartData = severityData.length > 0 ? severityData : [];
@@ -914,12 +671,12 @@ const Analytics = () => {
                   };
                   
                   return (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', alignItems: 'start', width: '100%' }}>
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '450px' }}>
+                    <>
+                      <div style={{ minHeight: '500px' }}>
                         <Pie {...config} />
                       </div>
-                      <div className="chart-insights" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
-                        <h4>Severity Analysis</h4>
+                      <div className="chart-insights" style={{ minHeight: '500px', overflowY: 'auto' }}>
+                        <h4 style={{ marginTop: 0 }}>Severity Analysis</h4>
                         {severityChartData.map((severity, index) => (
                           <div className="insight-row" key={index}>
                             <div className="insight-color" style={{ backgroundColor: severity.color }}></div>
@@ -957,7 +714,7 @@ const Analytics = () => {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </>
                   );
                 })()}
               </div>
@@ -1116,7 +873,8 @@ const Analytics = () => {
               width: '100%',
               background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.08))',
               border: '2px solid rgba(139, 92, 246, 0.25)',
-              marginTop: '2rem'
+              marginTop: '2rem',
+              minHeight: '750px'
             }}>
               <div className="premium-header">
                 <div className="header-content">
@@ -1462,78 +1220,7 @@ const Analytics = () => {
               </div>
             </div>
 
-            {/* Real-time Performance Metrics */}
-            <div className="chart-panel" style={{ 
-              width: '100%',
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.08))',
-              border: '2px solid rgba(59, 130, 246, 0.25)',
-              padding: '2.5rem',
-              borderRadius: '20px'
-            }}>
-              <div className="panel-header">
-                <div className="header-content">
-                  <h3>
-                    <Activity size={22} />
-                    Real-time Performance Metrics
-                  </h3>
-                  <p>Live monitoring of structural parameters</p>
-                </div>
-              </div>
-              <div className="panel-body">
-                {(() => {
-                  try {
-                    const baseHealth = insights.statistical_summary?.structural_health_score || 85;
-                    const performanceData = [
-                      { time: new Date(Date.now() - 300000).toLocaleTimeString(), value: Math.max(70, baseHealth - 3) },
-                      { time: new Date(Date.now() - 240000).toLocaleTimeString(), value: Math.max(70, baseHealth - 2) },
-                      { time: new Date(Date.now() - 180000).toLocaleTimeString(), value: Math.max(70, baseHealth - 1) },
-                      { time: new Date(Date.now() - 120000).toLocaleTimeString(), value: baseHealth },
-                      { time: new Date(Date.now() - 60000).toLocaleTimeString(), value: baseHealth },
-                      { time: currentTime, value: baseHealth }
-                    ];
 
-                    const config = {
-                      data: performanceData,
-                      xField: 'time',
-                      yField: 'value',
-                      smooth: true,
-                      color: '#06d6a0',
-                      lineStyle: { lineWidth: 4 },
-                      point: { 
-                        size: 8, 
-                        shape: 'circle',
-                        style: { 
-                          fill: '#06d6a0', 
-                          stroke: '#ffffff', 
-                          lineWidth: 3,
-                          shadowColor: 'rgba(6, 214, 160, 0.5)',
-                          shadowBlur: 8
-                        }
-                      },
-                      animation: false,
-                      xAxis: {
-                        label: { style: { fontSize: 11, fill: '#ffffff', fontWeight: 600 } },
-                        tickCount: 3,
-                        line: { style: { stroke: 'rgba(255,255,255,0.3)' } }
-                      },
-                      yAxis: {
-                        label: { 
-                          formatter: v => `${typeof v === 'number' ? v.toFixed(1) : v}%`,
-                          style: { fontSize: 12, fill: '#ffffff', fontWeight: 600 }
-                        },
-                        grid: { line: { style: { stroke: 'rgba(255,255,255,0.1)', lineDash: [2, 2] } } },
-                        line: { style: { stroke: 'rgba(255,255,255,0.3)' } }
-                      }
-                    };
-
-                    return <Line {...config} />;
-                  } catch (error) {
-                    console.error('Error rendering Performance Metrics:', error);
-                    return <div className="chart-error">Chart temporarily unavailable</div>;
-                  }
-                })()}
-              </div>
-            </div>
 
             {/* Statistical Analysis Results */}
             <div className="chart-panel" style={{ 
@@ -4183,10 +3870,22 @@ const Analytics = () => {
       }}>
         <div className="header-content">
           <div className="header-main">
-            <h1 style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+            <h1 style={{ 
+              fontSize: '2.8rem', 
+              fontWeight: 900,
+              background: 'linear-gradient(135deg, #10b981, #3b82f6, #8b5cf6)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              marginBottom: '1rem',
+              textShadow: '0 2px 8px rgba(0,0,0,0.3)'
+            }}>
+              InfraVision AI Analytics
+            </h1>
+            <h2 style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.3)', fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>
               <BarChart className="inline-icon glow-icon" size={32} />
               Advanced Analytics Dashboard
-            </h1>
+            </h2>
             <p style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
               Comprehensive statistical analysis and machine learning insights for infrastructure monitoring
             </p>
