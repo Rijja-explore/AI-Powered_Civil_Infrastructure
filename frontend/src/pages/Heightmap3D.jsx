@@ -64,20 +64,11 @@ function Model3D({ url, isGLB = false }) {
   }, [url, isGLB]);
 
   if (error) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#991b1b" }}>
-        <span style={{ fontSize: "1rem", fontWeight: 600 }}>❌ {error}</span>
-      </div>
-    );
+    return null;
   }
 
   if (!model) {
-    return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#999" }}>
-        <RotateCw size={32} style={{ animation: "spin 1s linear infinite" }} />
-        <span style={{ marginLeft: "1rem" }}>Loading 3D Model...</span>
-      </div>
-    );
+    return null;
   }
 
   return <primitive object={model} />;
@@ -145,12 +136,7 @@ function parseASCIISTL(data) {
 }
 
 function LoadingSpinner() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#999" }}>
-      <RotateCw size={32} style={{ animation: "spin 1s linear infinite" }} />
-      <span style={{ marginLeft: "1rem" }}>Loading 3D Model...</span>
-    </div>
-  );
+  return null;
 }
 
 export default function Heightmap3D() {
