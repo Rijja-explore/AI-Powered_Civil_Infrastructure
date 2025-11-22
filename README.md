@@ -1,142 +1,296 @@
-# 🏗️ AI-Powered Civil Infrastructure Monitoring
-
-## 📋 Executive Summary
-
-**AI-Powered Civil Infrastructure** is a production-ready platform that automates structural health monitoring (SHM) for civil infrastructure. It combines advanced computer vision, machine learning, and real-time 3D visualization to enable rapid damage detection, predictive maintenance planning, and data-driven decision-making for infrastructure agencies.
-
-### 🎯 Key Innovation: Automated 2D-to-3D Heightmap Generation
-Our proprietary pipeline converts standard 2D inspection photographs into interactive 3D models in **<2.5 seconds**, enabling:
-- **3.2× faster** damage assessment compared to traditional 2D analysis
-- **94.2% accuracy** in edge detection for structural boundaries
-- **Platform-agnostic delivery** (Blender, Three.js, WebGL, React)
-- **99.2% operational uptime** in production deployment
+# InfraVision AI - Structural Health Monitoring System
+**Complete Data Analytics Platform with AI-Powered Infrastructure Assessment**
 
 ---
 
-## 🌟 Key Features
-
-### 🎨 **3D Heightmap Generation** (NEW!)
-The centerpiece of this project - converts 2D inspection images into stunning interactive 3D models:
-
-- **Heatmap Coloring**: JET colormap (blue→green→yellow→red) encodes intensity variations
-- **Edge Detection**: Canny algorithm identifies structural boundaries as striking purple/magenta overlay
-- **Real-Time Processing**: <2.5 seconds per image at 300×300 resolution
-- **Multiple Export Formats**: 
-  - GLB (textured 3D model) - **RECOMMENDED**
-  - STL (monochrome for CAD/3D printing)
-- **Interactive Viewer**: Rotate, zoom, pan with full controls
-- **Backface Rendering**: View colors from all angles
-
-**Use Cases:**
-- Bridge inspection: Identify cracks and spalling damage
-- Corrosion surveys: Map pit patterns and severity
-- Building facades: Visualize weathering and damage gradients
-- Historic structures: Monitor crack propagation over time
-
-### 🔍 **Computer Vision Analysis**
-- Crack detection with severity classification
-- Material identification (concrete, steel, masonry, wood)
-- Biological growth detection (moss, algae, vegetation)
-- Advanced edge detection and segmentation
-- Depth field estimation
-- Automated PDF report generation
-
-### 📹 **Video Analysis**
-- Frame-by-frame structural damage analysis
-- Temporal trend detection and statistics
-- Critical issue identification and flagging
-- Aggregated metrics and risk scoring
-
-### 📊 **Real-Time Monitoring Dashboard**
-- Live camera feed integration
-- Instant damage detection and alerts
-- Infrastructure health scoring
-- Severity distribution visualization
-- Predictive deterioration trends
-- Environmental impact assessment
-
-### 📈 **Advanced Analytics**
-- Historical damage progression tracking
-- Risk assessment and prioritization
-- Maintenance scheduling optimization
-- Cost-benefit analysis for repairs
-- Regulatory compliance documentation
+## 📋 Table of Contents
+1. [Project Overview](#project-overview)
+2. [Features](#features)
+3. [Installation & Setup](#installation--setup)
+4. [Usage Guide](#usage-guide)
+5. [Analytics Dashboard](#analytics-dashboard)
+6. [Statistical Tests & Hypothesis](#statistical-tests--hypothesis)
+7. [API Documentation](#api-documentation)
+8. [Data Processing Pipeline](#data-processing-pipeline)
+9. [System Architecture](#system-architecture)
 
 ---
 
-## 🚀 Quick Start
+## Project Overview
+
+**InfraVision AI** is a comprehensive infrastructure monitoring system that uses advanced machine learning and data analytics to assess the structural health of buildings, bridges, and civil infrastructure. The system analyzes infrastructure photographs to detect cracks, vegetation growth, moisture damage, thermal anomalies, and stress indicators, then produces detailed analytical reports.
+
+### Key Capabilities
+- **AI-Powered Detection**: YOLO-based crack and damage detection
+- **Real-Time Monitoring**: Live camera capture and streaming analysis
+- **Comprehensive Analytics**: 24-element data analysis dashboard
+- **Statistical Validation**: Full hypothesis testing with p-values and H₀/H₁ definitions
+- **3D Visualization**: Height maps and 3D models from 2D images
+- **PDF Reporting**: Generate comprehensive analysis reports
+
+---
+
+## Features
+
+### 1. Image Analysis
+- Upload infrastructure photographs (JPG/PNG)
+- Real-time crack detection and severity classification
+- Vegetation coverage analysis
+- Moisture and stress indicators
+- AI-powered health score calculation
+- Instant visual reports with damage overlays
+
+### 2. Video Analysis
+- Frame-by-frame processing
+- Real-time damage detection
+- Temporal trend analysis
+- Performance optimization for video streams
+
+### 3. Real-Time Monitoring
+- Live camera feed capture and analysis
+- Continuous infrastructure surveillance
+- Alert system for critical conditions
+- Performance metrics dashboard
+
+### 4. Analytics Dashboard: 24-Element Complete Package
+
+#### Dataset Exploratory Data Analysis (9 charts)
+1. **Histogram**: Crack Density Distribution
+2. **Histogram**: Vegetation Coverage Distribution
+3. **Bar Chart**: Crack Severity Distribution (Minor/Moderate/Severe/Critical)
+4. **Bar Chart**: Vegetation Severity
+5. **Boxplot**: Crack Density Quartiles (Q1, Median, Q3, IQR)
+6. **Boxplot**: Vegetation Coverage Quartiles
+7. **Heatmap**: Feature Correlation Matrix
+8. **Scatter Plot**: Crack Density vs Vegetation Coverage
+9. **Distribution**: Health Score Histogram
+
+#### Statistical Tests & Hypothesis Testing (6 visuals)
+10. **QQ Plot**: Crack Density Normality Test (Shapiro-Wilk)
+11. **QQ Plot**: Vegetation Coverage Normality Test
+12. **Normality Panel**: Shapiro-Wilk Results with H₀/H₁
+13. **Chi-Square Test**: Severity Independence Testing
+14. **ANOVA Test**: Health Scores Across Material Types
+15. **Regression Plot**: Crack Density vs Health Score (R²=0.91)
+
+#### Image-Level Analytics (4 charts)
+16. **Radar Chart**: Current Image vs Dataset Average (6 metrics)
+17. **Contribution Bar Chart**: Health Score Component Breakdown
+18. **Hidden Damage Analysis**: Overlap Detection Chart
+19. **Percentile Comparison**: Image Position in Dataset
+
+#### System Diagrams (2 diagrams)
+20. **Pipeline Flowchart**: Image → Preprocessing → Segmentation → Features → Analytics → Health Score
+21. **Processing Block Diagram**: Crack → Vegetation → Moisture → Stress → Thermal → Risk Integration
+
+#### Summary Tables (3 tables)
+22. **Dataset Statistics Table**: Mean, Std Dev, Min, Max for all metrics
+23. **Image vs Dataset Comparison**: Value, Dataset Mean, Percentile
+24. **Test Results Summary**: All statistical tests with p-values and conclusions
+
+### 5. 3D Visualization
+- Convert 2D crack patterns to 3D heightmaps
+- GLB model generation for AR/VR applications
+- Textured 3D visualization
+- Interactive 3D viewer
+
+### 6. PDF Reporting
+- Generate comprehensive analysis PDFs
+- Include all charts and insights
+- Executive summary reports
+- Exportable data tables
+
+---
+
+## Installation & Setup
 
 ### Prerequisites
-- **Python 3.10+** (with pip)
-- **Node.js 16+** (with npm)
-- **Modern web browser** (Chrome, Firefox, Safari, Edge)
-- 2GB free disk space
-- 4GB RAM minimum (8GB recommended)
+- Python 3.8+
+- Node.js 14+
+- npm or yarn
+- GPU recommended (CUDA 11.0+)
 
-### Installation (5 minutes)
+### Backend Setup
 
-#### 1. Clone Repository
+1. **Install Python Dependencies**
 ```bash
-git clone https://github.com/Rijja-explore/AI-Powered_-Civil_Infrastructure.git
-cd AI-Powered_-Civil_Infrastructure
+cd d:\Projects\AI-Powered_-Civil_Infrastructure
+pip install -r requirements.txt
 ```
 
-#### 2. Backend Setup
+2. **Start Backend API Server**
 ```bash
-# Create Python virtual environment (recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Start backend API (runs on port 5002)
 python finalwebapp_api.py
 ```
 
-#### 3. Frontend Setup
+Expected output:
+```
+🚀 Starting InfraVision AI API Server...
+📍 Server will be available at: http://localhost:5002
+✨ Ready for AI-powered infrastructure monitoring!
+```
+
+### Frontend Setup
+
+1. **Install Node Dependencies**
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
+```
 
-# Start React app (runs on port 3000)
+2. **Start Development Server**
+```bash
 npm start
 ```
 
-#### 4. Access Application
-- **Web Interface**: [http://localhost:3000](http://localhost:3000)
-- **Backend API**: [http://localhost:5002](http://localhost:5002)
-- **API Docs**: [http://localhost:5002/api/docs](http://localhost:5002/api/docs)
+3. **Access Web Interface**
+Open browser: `http://localhost:3000`
 
 ---
 
-## 💡 Usage Guide
+## Usage Guide
 
-### 3D Heightmap Generator (Recommended Feature)
+### Image Analysis Workflow
 
-**Step 1: Navigate to 3D Heightmap Tab**
-- Open the web interface at [http://localhost:3000](http://localhost:3000)
-- Select "3D Heightmap" from the navigation menu
+1. Navigate to "Image Analysis" tab
+2. Upload infrastructure photograph (JPG/PNG)
+3. Wait for analysis (5-15 seconds)
+4. View results and damage overlay
+5. Access full analytics in "Analytics" tab
 
-**Step 2: Upload Image**
-- Click "Choose File" or drag-and-drop a JPG/PNG image
-- Supports any resolution (auto-resized to 300×300 for processing)
-- Typical images: structural photos, aerial views, surface inspections
+### Real-Time Monitoring
 
-**Step 3: Configure (Optional)**
-- **Resolution**: 100-500px (default: 300px)
-- **Height Scale**: 2-30 (default: 12.0) - controls 3D depth
-- **Smoothing**: 0-5 (default: 1.2) - reduces noise
+1. Navigate to "Real-Time Monitoring" tab
+2. Connect camera device
+3. View live feed with damage overlay
+4. Monitor metrics in real-time
 
-**Step 4: View 3D Model**
-- Model appears in interactive viewer (600×600 canvas)
-- **Controls**:
-  - **Rotate**: Click + drag
-  - **Zoom**: Scroll wheel
-  - **Pan**: Right-click + drag
-  - **Reset**: Double-click
+### 3D Heightmap
+
+1. Navigate to "3D Heightmap" tab
+2. Upload processed image or previous analysis
+3. Generate 3D heightmap visualization
+4. Export as GLB model for AR/VR
+
+---
+
+## Analytics Dashboard Overview
+
+### 24-Element Complete Package
+
+#### Dataset EDA: 9 Charts
+- Crack density and vegetation coverage histograms
+- Severity and type distribution bar charts
+- Boxplots with quartiles and outliers
+- Correlation heatmap (all feature relationships)
+- Scatter plots and distribution plots
+
+#### Statistical Tests: 6 Visuals
+- QQ plots for normality (Shapiro-Wilk test)
+- Chi-square independence testing
+- ANOVA across material types
+- Linear regression analysis (R²=0.91)
+- All tests include H₀/H₁ definitions and p-values
+
+#### Image Analytics: 4 Charts
+- Radar chart comparing to dataset average
+- Component contribution breakdown
+- Hidden damage overlap analysis
+- Percentile positioning chart
+
+#### System Diagrams: 2 Diagrams
+- Processing pipeline flowchart
+- ML model block diagram
+
+#### Summary Tables: 3 Tables
+- Dataset statistics (mean, std, min, max)
+- Current image vs dataset comparison
+- Statistical test results with conclusions
+
+---
+
+## API Documentation
+
+### Base URL: `http://localhost:5002`
+
+### Image Analysis
+**POST** `/api/analyze`
+- Upload image for analysis
+- Returns crack density, health score, severity
+
+### Analytics Endpoints
+**GET** `/api/analytics/dataset` - Aggregate statistics  
+**GET** `/api/analytics/last_image` - Latest analysis metrics  
+**GET** `/api/analytics/hidden_damage` - Subsurface damage detection  
+
+### Health Check
+**GET** `/api/health` - Verify server status
+
+---
+
+## Statistical Hypothesis Testing
+
+All tests use α = 0.05 significance level
+
+### Normality (Shapiro-Wilk)
+- H₀: Data is normally distributed
+- H₁: Data is NOT normally distributed
+- Result: Both crack and vegetation data reject H₀ (p < 0.05)
+
+### Independence (Chi-Square)
+- H₀: Severity and vegetation are independent
+- H₁: Severity depends on vegetation presence
+- Result: Reject H₀ - Strong dependency (p = 0.0089)
+
+### ANOVA (Material Types)
+- H₀: Health scores equal across materials
+- H₁: At least one material differs
+- Result: Reject H₀ - Highly significant (p = 0.0012)
+
+### Regression (Crack → Health)
+- H₀: No relationship (slope = 0)
+- H₁: Strong relationship exists (slope ≠ 0)
+- Equation: Health = 95.2 - 0.92 × Crack Density
+- R² = 0.91, p-value = 0.0001
+- Result: Highly significant predictive model
+
+---
+
+## Project Structure
+
+```
+project/
+├── frontend/                      # React.js web interface
+│   ├── src/pages/
+│   │   ├── Analytics.jsx         # 24-element dashboard
+│   │   ├── ImageAnalysis.jsx
+│   │   ├── VideoAnalysis.jsx
+│   │   ├── Heightmap3D.jsx
+│   │   └── RealTimeMonitoring.jsx
+│   └── package.json
+├── finalwebapp_api.py            # Flask API
+├── finalwebapp.py                # Analysis functions
+├── requirements.txt              # Python packages
+├── runs/detect/                  # Detection model weights
+├── segmentation_model/           # Segmentation weights
+└── README.md
+```
+
+---
+
+## Version History
+
+**v1.0.0** (November 22, 2025)
+- ✅ 24-element analytics dashboard complete
+- ✅ Full statistical hypothesis testing
+- ✅ QQ plots, boxplots, regression analysis
+- ✅ Real-time API with 3 analytics endpoints
+- ✅ Glass-morphism UI
+- ✅ Comprehensive documentation
+
+---
+
+**InfraVision AI** - Empowering Infrastructure Health Through AI & Data Analytics
 
 **Step 5: Download**
 - Click "📥 Download" to save GLB file
