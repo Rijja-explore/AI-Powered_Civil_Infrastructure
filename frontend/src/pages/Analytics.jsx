@@ -11,11 +11,23 @@ import {
 } from 'lucide-react';
 import { useAnalysis } from '../contexts/AnalysisContext';
 
-// Error Boundary for Safe Chart Rendering
+// Error Boundary for Safe Chart Rendering with Enhanced Error Handling
 class SafeChartWrapper extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { 
+      hasError: false, 
+      errorInfo: null,
+      retryCount: 0,
+      isLoading: true
+    };
+    
+    // Auto-hide loading state after 2 seconds
+    setTimeout(() => {
+      if (this.state.isLoading) {
+        this.setState({ isLoading: false });
+      }
+    }, 2000);
   }
 
   static getDerivedStateFromError(error) {
@@ -23,25 +35,96 @@ class SafeChartWrapper extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Chart Error:', error, errorInfo);
+    console.error('Chart Error Details:', error);
+    console.error('Error Info:', errorInfo);
+    this.setState({ errorInfo });
   }
+  
+  handleRetry = () => {
+    this.setState({ 
+      hasError: false, 
+      errorInfo: null,
+      retryCount: this.state.retryCount + 1,
+      isLoading: true
+    });
+    
+    setTimeout(() => {
+      this.setState({ isLoading: false });
+    }, 1000);
+  };
 
   render() {
     if (this.state.hasError) {
       return (
         <div style={{
-          padding: '1rem',
-          background: '#fee2e2',
-          border: '1px solid #fecaca',
-          borderRadius: '0.5rem',
+          padding: '2rem',
+          background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+          border: '2px dashed #ef4444',
+          borderRadius: '12px',
           textAlign: 'center',
-          color: '#dc2626'
+          color: '#dc2626',
+          margin: '1rem 0'
         }}>
-          <p>Chart rendering error</p>
+          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⚠️</div>
+          <h4 style={{ margin: '0 0 1rem 0', color: '#dc2626' }}>Chart Error</h4>
+          <p style={{ margin: '0 0 1rem 0', fontSize: '0.9rem' }}>
+            Failed to render chart component
+          </p>
+          <button
+            onClick={this.handleRetry}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#dc2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '600'
+            }}
+          >
+            Retry ({this.state.retryCount})
+          </button>
         </div>
       );
     }
-    return this.props.children;
+    
+    if (this.state.isLoading) {
+      return (
+        <div style={{
+          padding: '3rem 2rem',
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+          borderRadius: '12px',
+          border: '2px solid #3b82f6',
+          margin: '1rem 0'
+        }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #e5e7eb',
+            borderTop: '4px solid #3b82f6',
+            borderRadius: '50%',
+            margin: '0 auto 1rem',
+            animation: 'spin 1s linear infinite'
+          }}></div>
+          <p style={{ margin: 0, color: '#1f2937', fontWeight: '600' }}>Loading Chart...</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '12px', 
+        padding: '1.5rem',
+        border: '1px solid #e5e7eb',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        margin: '1rem 0'
+      }}>
+        {this.props.children}
+      </div>
+    );
   }
 }
 
@@ -79,30 +162,156 @@ const Analytics = () => {
     fetchDatasetAnalytics();
   }, []);
 
-  // Listen for image analysis updates from context
+  // Listen for image analysis updates and fetch image analytics
   useEffect(() => {
-    if (lastAnalysis && outputImages) {
-      setImageAnalysisData(lastAnalysis);
-      setImageOutputs(outputImages);
-      console.log('Image analysis updated:', lastAnalysis);
-    }
+    const fetchImageAnalytics = async () => {
+      if (lastAnalysis && outputImages) {
+        try {
+          // First set the basic analysis data
+          setImageAnalysisData(lastAnalysis);
+          setImageOutputs(outputImages);
+          console.log('Image analysis updated:', lastAnalysis);
+          
+          // Then fetch detailed analytics from API
+          const response = await fetch('http://localhost:5002/api/analytics/last_image');
+          if (response.ok) {
+            const apiData = await response.json();
+            console.log('Fetched image analytics from API:', apiData);
+            
+            // Merge API data with context data
+            setImageAnalysisData(prev => ({
+              ...prev,
+              ...lastAnalysis,
+              apiMetrics: apiData.last_image || {},
+              detections: lastAnalysis.results?.crack_detection?.details || [],
+              metrics: {
+                crack_density: apiData.last_image?.crack_density / 100 || (lastAnalysis.results?.data_science_insights?.statistical_summary?.crack_density || 0),
+                vegetation_coverage: apiData.last_image?.vegetation_coverage / 100 || 0,
+                health_score: apiData.last_image?.health_score || (lastAnalysis.results?.data_science_insights?.statistical_summary?.structural_health_score || 0),
+                detection_count: apiData.last_image?.crack_count || (lastAnalysis.results?.crack_detection?.count || 0),
+                severity: apiData.last_image?.severity || 'Moderate'
+              }
+            }));
+            
+            // Force tab switch to image analysis if we have new data
+            if (activeTab === 'dataset') {
+              setActiveTab('image');
+            }
+          } else {
+            console.warn('Failed to fetch image analytics from API, using context data only');
+          }
+        } catch (error) {
+          console.error('Error fetching image analytics:', error);
+          // Still set context data even if API fails
+          setImageAnalysisData(lastAnalysis);
+          setImageOutputs(outputImages);
+        }
+      }
+    };
+    
+    fetchImageAnalytics();
   }, [lastAnalysis, outputImages]);
 
-  // Generate mock image-level analytics data from imageAnalysisData
-  const generateImageMetrics = () => {
-    if (!imageAnalysisData) return {};
+  // Force refresh chart containers when dataset changes - MUST be before loading state return
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Trigger window resize to refresh charts
+      window.dispatchEvent(new Event('resize'));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [datasetAnalytics]);
+
+  // Generate dynamic image-level data from analysis
+  const generateImageRadarData = () => {
+    if (!imageAnalysisData?.metrics) return null;
     
-    const metrics = imageAnalysisData.metrics || {};
-    return {
-      health_score: metrics.health_score || 65,
-      crack_count: metrics.crack_count || 0,
-      vegetation_count: metrics.vegetation_coverage || 0,
-      risk_level: metrics.risk_level || 'Moderate',
-      damage_area: metrics.damage_area || 0,
-      moisture_level: metrics.moisture_level || 45,
-      stress_level: metrics.stress_level || 50,
-      thermal_anomaly: metrics.thermal_anomaly || 30
+    const m = imageAnalysisData.metrics;
+    return [
+      {
+        metric: 'Crack Density',
+        image: Math.min(100, (m.crack_density || 0) * 100),
+        fullMark: 100
+      },
+      {
+        metric: 'Vegetation',
+        image: Math.min(100, (m.vegetation_coverage || 0) * 100),
+        fullMark: 100
+      },
+      {
+        metric: 'Risk Score',
+        image: Math.min(100, (m.risk_score || 0) * 100),
+        fullMark: 100
+      },
+      {
+        metric: 'Confidence',
+        image: Math.min(100, (m.avg_confidence || 0) * 100),
+        fullMark: 100
+      },
+      {
+        metric: 'Detections',
+        image: Math.min(100, ((m.detection_count || 0) / 10) * 100),
+        fullMark: 100
+      }
+    ];
+  };
+
+  const generateHealthScore = () => {
+    if (!imageAnalysisData?.metrics) return 50;
+    const risk = imageAnalysisData.metrics.risk_score || 0.5;
+    return Math.round((1 - risk) * 100);
+  };
+
+  const generateHealthContributors = () => {
+    if (!imageAnalysisData?.metrics) {
+      return [
+        { name: 'Crack Severity', value: 35 },
+        { name: 'Vegetation Coverage', value: 20 },
+        { name: 'Material Integrity', value: 25 },
+        { name: 'Environmental Stress', value: 20 }
+      ];
+    }
+
+    const m = imageAnalysisData.metrics;
+    const total = 100;
+    const crackSev = Math.round((m.crack_density || 0) * 40);
+    const vegCov = Math.round((m.vegetation_coverage || 0) * 25);
+    const material = 25;
+    const envStress = Math.round((m.risk_score || 0) * 30);
+
+    return [
+      { name: 'Crack Severity', value: Math.min(40, crackSev) },
+      { name: 'Vegetation', value: Math.min(25, vegCov) },
+      { name: 'Material', value: material },
+      { name: 'Environmental', value: Math.min(30, envStress) }
+    ];
+  };
+
+  const generateDetectionsByType = () => {
+    if (!imageAnalysisData?.detections || imageAnalysisData.detections.length === 0) {
+      return [
+        { type: 'Cracks', count: 0 },
+        { type: 'Vegetation', count: 0 },
+        { type: 'Material Defects', count: 0 },
+        { type: 'Environmental', count: 0 }
+      ];
+    }
+
+    const detections = imageAnalysisData.detections;
+    const counts = {
+      'Cracks': 0,
+      'Vegetation': 0,
+      'Material Defects': 0,
+      'Environmental': 0
     };
+
+    detections.forEach(d => {
+      if (d.type?.toLowerCase().includes('crack')) counts['Cracks']++;
+      else if (d.type?.toLowerCase().includes('veg')) counts['Vegetation']++;
+      else if (d.type?.toLowerCase().includes('material')) counts['Material Defects']++;
+      else counts['Environmental']++;
+    });
+
+    return Object.entries(counts).map(([type, count]) => ({ type, count }));
   };
 
   // Helper functions
@@ -207,6 +416,14 @@ const Analytics = () => {
     { range: '80-90%', count: 22 },
     { range: '90-100%', count: 8 }
   ];
+  
+  // Ensure all chart data arrays have data by using fallbacks
+  console.log('Chart data check:', {
+    crackDensityHistogram: crackDensityHistogram.length,
+    vegetationCoverageHistogram: vegetationCoverageHistogram.length,
+    crackAnalysis: Boolean(crackAnalysis.metrics),
+    vegetationAnalysis: Boolean(vegetationAnalysis.metrics)
+  });
 
   // Boxplot data
   const crackBoxplotData = crackAnalysis.metrics?.crack_crack_pixel_ratio ? [{
@@ -645,42 +862,257 @@ const Analytics = () => {
             </div>
           </SafeChartWrapper>
 
-          {/* 14. Summary Statistics Table */}
+          {/* 14. Summary Statistics Table - SIMPLIFIED */}
           <SafeChartWrapper>
-            <div className="card">
+            <div className="card" style={{ gridColumn: '1 / -1' }}>
               <div className="card-header">
-                <h3>📋 14. Dataset Summary Statistics</h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--secondary)', margin: '0.5rem 0 0 0' }}>
-                  <strong>Hypothesis:</strong> Balanced dataset with representative distribution across train/test/validation splits
-                </p>
+                <h3>📊 14. Dataset Summary Statistics</h3>
               </div>
               <div className="card-content">
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid var(--border)' }}>
-                      <th style={{ padding: '0.5rem', textAlign: 'left' }}>Metric</th>
-                      <th style={{ padding: '0.5rem', textAlign: 'left' }}>Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '0.5rem' }}>Total Images</td>
-                      <td style={{ padding: '0.5rem' }}>{metadata.total_images || '7,562'}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '0.5rem' }}>Crack Images</td>
-                      <td style={{ padding: '0.5rem' }}>{metadata.total_crack_images || '6,500'}</td>
-                    </tr>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '0.5rem' }}>Vegetation Images</td>
-                      <td style={{ padding: '0.5rem' }}>{metadata.total_vegetation_images || '1,062'}</td>
-                    </tr>
-                    <tr>
-                      <td style={{ padding: '0.5rem' }}>Generated</td>
-                      <td style={{ padding: '0.5rem' }}>{new Date(metadata.generated_at).toLocaleDateString() || 'Today'}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                  {/* Crack Statistics */}
+                  <div style={{ 
+                    padding: '1.5rem', 
+                    background: 'linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%)', 
+                    borderRadius: '12px', 
+                    border: '3px solid #8884d8',
+                    boxShadow: '0 4px 12px rgba(136, 132, 216, 0.15)'
+                  }}>
+                    <h4 style={{ 
+                      marginTop: 0, 
+                      marginBottom: '1.5rem', 
+                      color: '#1a202c', 
+                      fontSize: '1.1rem',
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      borderBottom: '2px solid #8884d8',
+                      paddingBottom: '0.5rem'
+                    }}>🔍 Crack Analysis Statistics</h4>
+                    <table style={{ width: '100%', fontSize: '1rem', borderCollapse: 'collapse' }}>
+                      <tbody>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(136, 132, 216, 0.1)'
+                          }}>Mean</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {crackAnalysis.metrics?.crack_crack_pixel_ratio?.mean 
+                              ? (crackAnalysis.metrics.crack_crack_pixel_ratio.mean * 100).toFixed(1) 
+                              : '81.8'}%
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(136, 132, 216, 0.05)'
+                          }}>Median</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {crackAnalysis.metrics?.crack_crack_pixel_ratio?.median 
+                              ? (crackAnalysis.metrics.crack_crack_pixel_ratio.median * 100).toFixed(1) 
+                              : '88.7'}%
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(136, 132, 216, 0.1)'
+                          }}>Std Dev</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {crackAnalysis.metrics?.crack_crack_pixel_ratio?.std 
+                              ? (crackAnalysis.metrics.crack_crack_pixel_ratio.std * 100).toFixed(1) 
+                              : '18.2'}%
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(136, 132, 216, 0.05)'
+                          }}>Range</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {crackAnalysis.metrics?.crack_crack_pixel_ratio?.min && crackAnalysis.metrics?.crack_crack_pixel_ratio?.max
+                              ? `${(crackAnalysis.metrics.crack_crack_pixel_ratio.min * 100).toFixed(1)}% - ${(crackAnalysis.metrics.crack_crack_pixel_ratio.max * 100).toFixed(1)}%`
+                              : '17.8% - 100%'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Vegetation Statistics */}
+                  <div style={{ 
+                    padding: '1.5rem', 
+                    background: 'linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%)', 
+                    borderRadius: '12px', 
+                    border: '3px solid #22c55e',
+                    boxShadow: '0 4px 12px rgba(34, 197, 94, 0.15)'
+                  }}>
+                    <h4 style={{ 
+                      marginTop: 0, 
+                      marginBottom: '1.5rem', 
+                      color: '#1a202c', 
+                      fontSize: '1.1rem',
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      borderBottom: '2px solid #22c55e',
+                      paddingBottom: '0.5rem'
+                    }}>🌿 Vegetation Analysis Statistics</h4>
+                    <table style={{ width: '100%', fontSize: '1rem', borderCollapse: 'collapse' }}>
+                      <tbody>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(34, 197, 94, 0.1)'
+                          }}>Mean</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {vegetationAnalysis.metrics?.vegetation_vegetation_coverage?.mean 
+                              ? (vegetationAnalysis.metrics.vegetation_vegetation_coverage.mean * 100).toFixed(1) 
+                              : '18.5'}%
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(34, 197, 94, 0.05)'
+                          }}>Median</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {vegetationAnalysis.metrics?.vegetation_vegetation_coverage?.median 
+                              ? (vegetationAnalysis.metrics.vegetation_vegetation_coverage.median * 100).toFixed(1) 
+                              : '12.4'}%
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(34, 197, 94, 0.1)'
+                          }}>Std Dev</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {vegetationAnalysis.metrics?.vegetation_vegetation_coverage?.std 
+                              ? (vegetationAnalysis.metrics.vegetation_vegetation_coverage.std * 100).toFixed(1) 
+                              : '22.2'}%
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            fontWeight: '700', 
+                            color: '#000000',
+                            background: 'rgba(34, 197, 94, 0.05)'
+                          }}>Range</td>
+                          <td style={{ 
+                            padding: '0.75rem 1rem', 
+                            textAlign: 'right', 
+                            color: '#000000', 
+                            fontWeight: '700',
+                            fontSize: '1.1rem'
+                          }}>
+                            {vegetationAnalysis.metrics?.vegetation_vegetation_coverage?.min && vegetationAnalysis.metrics?.vegetation_vegetation_coverage?.max
+                              ? `${(vegetationAnalysis.metrics.vegetation_vegetation_coverage.min * 100).toFixed(1)}% - ${(vegetationAnalysis.metrics.vegetation_vegetation_coverage.max * 100).toFixed(1)}%`
+                              : '0.0% - 99.0%'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Dataset Overview */}
+                  <div style={{ 
+                    padding: '1.5rem', 
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', 
+                    borderRadius: '12px', 
+                    border: '3px solid #3b82f6', 
+                    gridColumn: '1 / -1',
+                    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.15)'
+                  }}>
+                    <h4 style={{ 
+                      marginTop: 0, 
+                      marginBottom: '1.5rem', 
+                      color: '#1a202c', 
+                      fontSize: '1.1rem',
+                      fontWeight: '700',
+                      textAlign: 'center',
+                      borderBottom: '2px solid #3b82f6',
+                      paddingBottom: '0.5rem'
+                    }}>📊 Dataset Overview & Summary</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1.5rem' }}>
+                      <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#000000', marginBottom: '0.5rem' }}>{metadata.total_images || '7,562'}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#000000', fontWeight: '600' }}>Total Images</div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#000000', marginBottom: '0.5rem' }}>{metadata.total_crack_images || '4,500'}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#000000', fontWeight: '600' }}>Crack Images</div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#000000', marginBottom: '0.5rem' }}>{metadata.total_vegetation_images || '3,062'}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#000000', fontWeight: '600' }}>Vegetation Images</div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#000000', marginBottom: '0.5rem' }}>{'224x224'}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#000000', fontWeight: '600' }}>Resolution</div>
+                      </div>
+                      <div style={{ textAlign: 'center', padding: '1rem', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#000000', marginBottom: '0.5rem' }}>{'2.3GB'}</div>
+                        <div style={{ fontSize: '0.9rem', color: '#000000', fontWeight: '600' }}>Dataset Size</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </SafeChartWrapper>
@@ -806,47 +1238,18 @@ const Analytics = () => {
               <SafeChartWrapper>
                 <div className="card">
                   <div className="card-header">
-                    <h3>📡 1. Image vs Dataset Comparison (Radar)</h3>
+                    <h3>📡 Image Analysis - Metrics Radar</h3>
                   </div>
                   <div className="card-content">
                     <ResponsiveContainer width="100%" height={300}>
-                      <RadarChart data={[
-                        {
-                          metric: 'Crack Density',
-                          image: 75,
-                          dataset: 82,
-                          fullMark: 100
-                        },
-                        {
-                          metric: 'Vegetation',
-                          image: 45,
-                          dataset: 60,
-                          fullMark: 100
-                        },
-                        {
-                          metric: 'Edge Density',
-                          image: 68,
-                          dataset: 70,
-                          fullMark: 100
-                        },
-                        {
-                          metric: 'Brightness',
-                          image: 55,
-                          dataset: 50,
-                          fullMark: 100
-                        },
-                        {
-                          metric: 'Texture',
-                          image: 72,
-                          dataset: 75,
-                          fullMark: 100
-                        }
+                      <RadarChart data={generateImageRadarData() || [
+                        { metric: 'Crack Density', image: 0, fullMark: 100 },
+                        { metric: 'Vegetation', image: 0, fullMark: 100 }
                       ]}>
                         <PolarGrid strokeDasharray="3 3" />
                         <PolarAngleAxis dataKey="metric" />
                         <PolarRadiusAxis angle={90} domain={[0, 100]} />
-                        <Radar name="Current Image" dataKey="image" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-                        <Radar name="Dataset Avg" dataKey="dataset" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.3} />
+                        <Radar name="Image Metrics" dataKey="image" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
                         <Legend />
                         <Tooltip />
                       </RadarChart>
@@ -859,13 +1262,13 @@ const Analytics = () => {
               <SafeChartWrapper>
                 <div className="card">
                   <div className="card-header">
-                    <h3>📊 2. Health Score Contributors</h3>
+                    <h3>📊 Health Score Breakdown</h3>
                   </div>
                   <div className="card-content">
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
                         <Pie
-                          data={[
+                          data={generateHealthContributors() || [
                             { name: 'Crack Severity', value: 35 },
                             { name: 'Vegetation Coverage', value: 20 },
                             { name: 'Material Integrity', value: 25 },
@@ -874,17 +1277,16 @@ const Analytics = () => {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, value }) => `${name}: ${value}%`}
+                          label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          <Cell fill="#dc2626" />
-                          <Cell fill="#16a34a" />
-                          <Cell fill="#2563eb" />
-                          <Cell fill="#f59e0b" />
+                          {(generateHealthContributors() || []).map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={['#dc2626', '#16a34a', '#2563eb', '#f59e0b'][index % 4]} />
+                          ))}
                         </Pie>
-                        <Tooltip />
+                        <Tooltip formatter={(value) => `${value.toFixed(1)}%`} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -895,108 +1297,15 @@ const Analytics = () => {
               <SafeChartWrapper>
                 <div className="card">
                   <div className="card-header">
-                    <h3>🎯 3. Hidden Damage Overlap Regions</h3>
+                    <h3>🎯 Detected Objects</h3>
                   </div>
                   <div className="card-content">
                     <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={[
-                        { region: 'Top-Left', visible: 45, hidden: 28 },
-                        { region: 'Top-Right', visible: 38, hidden: 35 },
-                        { region: 'Center', visible: 52, hidden: 42 },
-                        { region: 'Bottom-Left', visible: 41, hidden: 31 },
-                        { region: 'Bottom-Right', visible: 48, hidden: 39 }
+                      <BarChart data={generateDetectionsByType() || [
+                        { type: 'No Data', count: 0 }
                       ]}>
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="region" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Bar dataKey="visible" fill="#8884d8" name="Visible Damage" />
-                        <Bar dataKey="hidden" fill="#fbbf24" name="Hidden Damage" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </SafeChartWrapper>
-
-              {/* 4. Percentile Chart - Image ranking */}
-              <SafeChartWrapper>
-                <div className="card">
-                  <div className="card-header">
-                    <h3>📈 4. Image Percentile Ranking</h3>
-                  </div>
-                  <div className="card-content">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={[
-                        { percentile: '0-20%\n(Best)', count: 1500, image: 0 },
-                        { percentile: '20-40%', count: 1800, image: 0 },
-                        { percentile: '40-60%\n(Current)', count: 2000, image: 1 },
-                        { percentile: '60-80%', count: 1300, image: 0 },
-                        { percentile: '80-100%\n(Worst)', count: 962, image: 0 }
-                      ]}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="percentile" />
-                        <YAxis />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#82ca9d" name="Images in Range" />
-                        <Bar dataKey="image" fill="#dc2626" name="Your Image" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </SafeChartWrapper>
-
-              {/* 5. Health Score Gauge */}
-              <SafeChartWrapper>
-                <div className="card">
-                  <div className="card-header">
-                    <h3>⚠️ 5. Structural Health Risk Score</h3>
-                  </div>
-                  <div className="card-content" style={{ padding: '2rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '3rem', fontWeight: 'bold', color: '#f59e0b', marginBottom: '0.5rem' }}>
-                      65%
-                    </div>
-                    <div style={{ 
-                      width: '100%', 
-                      height: '30px', 
-                      background: '#e5e7eb', 
-                      borderRadius: '15px', 
-                      overflow: 'hidden',
-                      marginBottom: '1rem'
-                    }}>
-                      <div style={{
-                        width: '65%',
-                        height: '100%',
-                        background: 'linear-gradient(90deg, #16a34a, #f59e0b, #dc2626)',
-                        transition: 'width 0.3s ease'
-                      }} />
-                    </div>
-                    <p style={{ color: 'var(--secondary)', marginBottom: '0.5rem' }}>MODERATE RISK</p>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--secondary)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                      <div><strong>Trend:</strong> ↓ Improving</div>
-                      <div><strong>Status:</strong> ⚠️ Monitor</div>
-                    </div>
-                  </div>
-                </div>
-              </SafeChartWrapper>
-
-              {/* 6. Crack Size Distribution */}
-              <SafeChartWrapper>
-                <div className="card">
-                  <div className="card-header">
-                    <h3>📏 6. Crack Size Distribution</h3>
-                  </div>
-                  <div className="card-content">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <BarChart data={[
-                        { size: 'Hairline\n<1mm', count: 45, severity: 1 },
-                        { size: 'Fine\n1-2mm', count: 38, severity: 2 },
-                        { size: 'Medium\n2-5mm', count: 22, severity: 3 },
-                        { size: 'Large\n5-10mm', count: 12, severity: 4 },
-                        { size: 'Severe\n>10mm', count: 5, severity: 5 }
-                      ]}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="size" />
+                        <XAxis dataKey="type" />
                         <YAxis />
                         <Tooltip />
                         <Bar dataKey="count" fill="#8884d8" />
@@ -1006,159 +1315,291 @@ const Analytics = () => {
                 </div>
               </SafeChartWrapper>
 
-              {/* 7. Crack Width Distribution */}
-              <SafeChartWrapper>
-                <div className="card">
-                  <div className="card-header">
-                    <h3>📐 7. Crack Width Analysis</h3>
-                  </div>
-                  <div className="card-content">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={[
-                        { position: 0, width: 0.5 },
-                        { position: 10, width: 1.2 },
-                        { position: 20, width: 2.1 },
-                        { position: 30, width: 1.8 },
-                        { position: 40, width: 2.5 },
-                        { position: 50, width: 3.2 },
-                        { position: 60, width: 2.8 },
-                        { position: 70, width: 1.5 },
-                        { position: 80, width: 0.8 },
-                        { position: 90, width: 0.3 }
-                      ]}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="position" label={{ value: 'Crack Length %', position: 'bottom' }} />
-                        <YAxis label={{ value: 'Width (mm)', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="width" stroke="#8884d8" strokeWidth={2} dot={{ fill: '#8884d8', r: 4 }} />
-                        <ReferenceLine y={2} stroke="#f59e0b" strokeDasharray="5 5" label="Concern Threshold" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </SafeChartWrapper>
 
-              {/* 8. Vegetation Severity Curve */}
-              <SafeChartWrapper>
-                <div className="card">
-                  <div className="card-header">
-                    <h3>🌿 8. Biological Growth Impact Curve</h3>
-                  </div>
-                  <div className="card-content">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={[
-                        { coverage: '0%', degradation: 0 },
-                        { coverage: '10%', degradation: 5 },
-                        { coverage: '20%', degradation: 12 },
-                        { coverage: '30%', degradation: 22 },
-                        { coverage: '40%', degradation: 35 },
-                        { coverage: '50%', degradation: 50 },
-                        { coverage: '60%', degradation: 68 },
-                        { coverage: '70%', degradation: 82 },
-                        { coverage: '80%', degradation: 92 },
-                        { coverage: '90%', degradation: 98 }
-                      ]}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="coverage" />
-                        <YAxis label={{ value: 'Degradation Risk %', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip />
-                        <Line type="natural" dataKey="degradation" stroke="#16a34a" strokeWidth={2} dot={{ fill: '#16a34a' }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </SafeChartWrapper>
 
-              {/* 9. Moisture Gradient Plot */}
+              {/* 6. Confidence Distribution Histogram */}
               <SafeChartWrapper>
                 <div className="card">
                   <div className="card-header">
-                    <h3>💧 9. Moisture Movement Gradient</h3>
-                  </div>
-                  <div className="card-content">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <AreaChart data={[
-                        { depth: 'Surface', moisture: 75 },
-                        { depth: '2mm', moisture: 68 },
-                        { depth: '5mm', moisture: 58 },
-                        { depth: '10mm', moisture: 45 },
-                        { depth: '15mm', moisture: 35 },
-                        { depth: '20mm', moisture: 25 },
-                        { depth: '30mm', moisture: 15 }
-                      ]}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="depth" />
-                        <YAxis label={{ value: 'Moisture %', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="moisture" fill="#3b82f6" stroke="#2563eb" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </SafeChartWrapper>
-
-              {/* 10. Stress Gradient Plot */}
-              <SafeChartWrapper>
-                <div className="card">
-                  <div className="card-header">
-                    <h3>⚡ 10. Load Distribution & Stress Gradient</h3>
-                  </div>
-                  <div className="card-content">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <ComposedChart data={[
-                        { zone: 'Support', stress: 90 },
-                        { zone: 'Load Zone 1', stress: 78 },
-                        { zone: 'Load Zone 2', stress: 85 },
-                        { zone: 'Center', stress: 92 },
-                        { zone: 'Load Zone 3', stress: 75 },
-                        { zone: 'Load Zone 4', stress: 80 },
-                        { zone: 'Support', stress: 88 }
-                      ]}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="zone" />
-                        <YAxis label={{ value: 'Stress Level %', angle: -90, position: 'insideLeft' }} />
-                        <Tooltip />
-                        <Bar dataKey="stress" fill="#f59e0b" />
-                        <ReferenceLine y={85} stroke="#dc2626" strokeDasharray="5 5" label="Critical Threshold" />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </SafeChartWrapper>
-
-              {/* 11. Thermal Hotspot Histogram */}
-              <SafeChartWrapper>
-                <div className="card">
-                  <div className="card-header">
-                    <h3>🔥 11. Thermal Hotspot Risk Distribution</h3>
+                    <h3>📈 Confidence Score Distribution</h3>
                   </div>
                   <div className="card-content">
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={[
-                        { temp: '< 15°C', anomalies: 2, risk: 'Low' },
-                        { temp: '15-20°C', anomalies: 8, risk: 'Low' },
-                        { temp: '20-25°C', anomalies: 28, risk: 'Normal' },
-                        { temp: '25-30°C', anomalies: 45, risk: 'Normal' },
-                        { temp: '30-35°C', anomalies: 38, risk: 'Elevated' },
-                        { temp: '35-40°C', anomalies: 22, risk: 'High' },
-                        { temp: '> 40°C', anomalies: 8, risk: 'Critical' }
+                        { range: '0-10%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) < 0.1).length || 0 },
+                        { range: '10-20%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.1 && (d.confidence || 0) < 0.2).length || 0 },
+                        { range: '20-30%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.2 && (d.confidence || 0) < 0.3).length || 0 },
+                        { range: '30-40%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.3 && (d.confidence || 0) < 0.4).length || 0 },
+                        { range: '40-50%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.4 && (d.confidence || 0) < 0.5).length || 0 },
+                        { range: '50-60%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.5 && (d.confidence || 0) < 0.6).length || 0 },
+                        { range: '60-70%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.6 && (d.confidence || 0) < 0.7).length || 0 },
+                        { range: '70-80%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.7 && (d.confidence || 0) < 0.8).length || 0 },
+                        { range: '80-90%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.8 && (d.confidence || 0) < 0.9).length || 0 },
+                        { range: '90-100%', count: imageAnalysisData?.detections?.filter(d => (d.confidence || 0) >= 0.9).length || 0 }
                       ]}>
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="temp" />
+                        <XAxis dataKey="range" />
                         <YAxis />
                         <Tooltip />
-                        <Bar dataKey="anomalies" fill="#f59e0b" />
+                        <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
               </SafeChartWrapper>
 
+              {/* 7. Severity Breakdown Pie Chart */}
+              <SafeChartWrapper>
+                <div className="card">
+                  <div className="card-header">
+                    <h3>⚡ Detection Severity Levels</h3>
+                  </div>
+                  <div className="card-content">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Critical', value: imageAnalysisData?.detections?.filter(d => d.severity === 'Critical').length || 0 },
+                            { name: 'High', value: imageAnalysisData?.detections?.filter(d => d.severity === 'High').length || 0 },
+                            { name: 'Medium', value: imageAnalysisData?.detections?.filter(d => d.severity === 'Medium').length || 0 },
+                            { name: 'Low', value: imageAnalysisData?.detections?.filter(d => d.severity === 'Low').length || 0 }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, value }) => `${name}: ${value}`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          <Cell fill="#dc2626" />
+                          <Cell fill="#ea580c" />
+                          <Cell fill="#f59e0b" />
+                          <Cell fill="#16a34a" />
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </SafeChartWrapper>
+
+              {/* 8. Detection Statistics Table */}
+              <SafeChartWrapper>
+                <div className="card" style={{ gridColumn: '1 / -1' }}>
+                  <div className="card-header">
+                    <h3>📊 Image Analysis - Statistical Measures</h3>
+                  </div>
+                  <div className="card-content">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                      {/* Detection Statistics */}
+                      <div>
+                        <h4 style={{ marginTop: 0, marginBottom: '1rem', color: '#6366f1' }}>🎯 Detection Statistics</h4>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                          <tbody>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Total Detections</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>{imageAnalysisData?.detections?.length || 0}</td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Mean Confidence (μ)</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.detections && imageAnalysisData.detections.length > 0
+                                  ? ((imageAnalysisData.detections.reduce((sum, d) => sum + (d.confidence || 0), 0) / imageAnalysisData.detections.length) * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Median Confidence</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.detections && imageAnalysisData.detections.length > 0
+                                  ? ((imageAnalysisData.detections.map(d => d.confidence || 0).sort((a, b) => a - b)[Math.floor(imageAnalysisData.detections.length / 2)]) * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Min Confidence</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.detections && imageAnalysisData.detections.length > 0
+                                  ? (Math.min(...imageAnalysisData.detections.map(d => d.confidence || 0)) * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Max Confidence</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.detections && imageAnalysisData.detections.length > 0
+                                  ? (Math.max(...imageAnalysisData.detections.map(d => d.confidence || 0)) * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Metrics Summary */}
+                      <div>
+                        <h4 style={{ marginTop: 0, marginBottom: '1rem', color: '#8884d8' }}>📏 Image Metrics</h4>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                          <tbody>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Crack Density</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.metrics?.crack_density 
+                                  ? (imageAnalysisData.metrics.crack_density * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Vegetation Coverage</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.metrics?.vegetation_coverage 
+                                  ? (imageAnalysisData.metrics.vegetation_coverage * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Risk Score</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.metrics?.risk_score 
+                                  ? (imageAnalysisData.metrics.risk_score * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Confidence Level</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.metrics?.avg_confidence 
+                                  ? (imageAnalysisData.metrics.avg_confidence * 100).toFixed(2)
+                                  : '0.00'}%
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>Detection Count</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                                {imageAnalysisData?.metrics?.detection_count || 0}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Severity Summary */}
+                      <div>
+                        <h4 style={{ marginTop: 0, marginBottom: '1rem', color: '#ea580c' }}>⚠️ Severity Summary</h4>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                          <tbody>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>🔴 Critical</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right', color: '#dc2626', fontWeight: '600' }}>
+                                {imageAnalysisData?.detections?.filter(d => d.severity === 'Critical').length || 0}
+                              </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>🟠 High</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right', color: '#ea580c', fontWeight: '600' }}>
+                                {imageAnalysisData?.detections?.filter(d => d.severity === 'High').length || 0}
+                              </td>
+                            </tr>
+                            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>🟡 Medium</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right', color: '#f59e0b', fontWeight: '600' }}>
+                                {imageAnalysisData?.detections?.filter(d => d.severity === 'Medium').length || 0}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ padding: '0.75rem', fontWeight: '600' }}>🟢 Low</td>
+                              <td style={{ padding: '0.75rem', textAlign: 'right', color: '#16a34a', fontWeight: '600' }}>
+                                {imageAnalysisData?.detections?.filter(d => d.severity === 'Low').length || 0}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </SafeChartWrapper>
+
+              {/* 9. Risk Distribution Line Chart */}
+              <SafeChartWrapper>
+                <div className="card">
+                  <div className="card-header">
+                    <h3>📉 Confidence Trend Analysis</h3>
+                  </div>
+                  <div className="card-content">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={
+                        imageAnalysisData?.detections && imageAnalysisData.detections.length > 0
+                          ? imageAnalysisData.detections.slice(0, 10).map((d, i) => ({
+                              index: i + 1,
+                              confidence: (d.confidence || 0) * 100
+                            }))
+                          : [{ index: 1, confidence: 0 }]
+                      }>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis dataKey="index" label={{ value: 'Detection #', position: 'bottom' }} />
+                        <YAxis label={{ value: 'Confidence %', angle: -90, position: 'insideLeft' }} />
+                        <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                        <Line type="monotone" dataKey="confidence" stroke="#8884d8" strokeWidth={2} dot={{ fill: '#8884d8', r: 4 }} />
+                        <ReferenceLine y={50} stroke="#f59e0b" strokeDasharray="5 5" label="Threshold" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </SafeChartWrapper>
+
+              {/* 10. ROI Heatmap - Detection Locations */}
+              <SafeChartWrapper>
+                <div className="card">
+                  <div className="card-header">
+                    <h3>🔥 Detection Hotspots (ROI Analysis)</h3>
+                  </div>
+                  <div className="card-content">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <ComposedChart data={[
+                        { zone: 'Top-Left', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('top-left')).length || 0, risk: 40 },
+                        { zone: 'Top-Center', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('top-center')).length || 0, risk: 50 },
+                        { zone: 'Top-Right', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('top-right')).length || 0, risk: 35 },
+                        { zone: 'Center-Left', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('center-left')).length || 0, risk: 55 },
+                        { zone: 'Center', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('center')).length || 0, risk: 75 },
+                        { zone: 'Center-Right', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('center-right')).length || 0, risk: 45 },
+                        { zone: 'Bottom-Left', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('bottom-left')).length || 0, risk: 30 },
+                        { zone: 'Bottom-Center', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('bottom-center')).length || 0, risk: 40 },
+                        { zone: 'Bottom-Right', detections: imageAnalysisData?.detections?.filter(d => d.location?.includes('bottom-right')).length || 0, risk: 25 }
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis dataKey="zone" angle={-45} textAnchor="end" height={80} />
+                        <YAxis yAxisId="left" label={{ value: 'Detection Count', angle: -90, position: 'insideLeft' }} />
+                        <YAxis yAxisId="right" orientation="right" label={{ value: 'Risk Level', angle: 90, position: 'insideRight' }} />
+                        <Tooltip />
+                        <Bar yAxisId="left" dataKey="detections" fill="#8884d8" name="Detection Count" />
+                        <LineChart data={[]}>
+                          <Line yAxisId="right" type="monotone" dataKey="risk" stroke="#f59e0b" name="Risk Level" />
+                        </LineChart>
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </SafeChartWrapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
               {/* 12. Crack-Vegetation Interaction Scatter */}
               <SafeChartWrapper>
                 <div className="card">
                   <div className="card-header">
-                    <h3>🔗 12. Crack-Vegetation Interaction</h3>
+                    <h3>🔗 Crack-Vegetation Relationship</h3>
                   </div>
                   <div className="card-content">
                     <ResponsiveContainer width="100%" height={300}>
@@ -1168,13 +1609,11 @@ const Analytics = () => {
                         <YAxis dataKey="vegetation" name="Vegetation Coverage %" label={{ value: 'Vegetation Coverage %', angle: -90, position: 'insideLeft' }} />
                         <Tooltip cursor={{ strokeDasharray: '3 3' }} />
                         <Scatter name="Combined Deterioration Risk" data={[
-                          { crack_density: 20, vegetation: 15, combined_risk: 35 },
-                          { crack_density: 35, vegetation: 25, combined_risk: 60 },
-                          { crack_density: 45, vegetation: 40, combined_risk: 85 },
-                          { crack_density: 55, vegetation: 30, combined_risk: 85 },
-                          { crack_density: 65, vegetation: 50, combined_risk: 115 },
-                          { crack_density: 75, vegetation: 60, combined_risk: 135 },
-                          { crack_density: 80, vegetation: 70, combined_risk: 150 }
+                          {
+                            crack_density: imageAnalysisData?.metrics?.crack_density || 0,
+                            vegetation: imageAnalysisData?.metrics?.vegetation_coverage || 0,
+                            combined_risk: ((imageAnalysisData?.metrics?.crack_density || 0) + (imageAnalysisData?.metrics?.vegetation_coverage || 0)) / 2
+                          }
                         ]} fill="#dc2626" />
                       </ScatterChart>
                     </ResponsiveContainer>
@@ -1191,3 +1630,117 @@ const Analytics = () => {
 };
 
 export default Analytics;
+
+// Inject CSS for better chart visibility
+const injectAnalyticsCSS = () => {
+  const existingStyle = document.getElementById('analytics-styles');
+  if (!existingStyle) {
+    const style = document.createElement('style');
+    style.id = 'analytics-styles';
+    style.innerHTML = `
+      /* Analytics Dashboard Styling */
+      .recharts-wrapper {
+        background: white !important;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb !important;
+      }
+      
+      .recharts-cartesian-grid-horizontal line,
+      .recharts-cartesian-grid-vertical line {
+        stroke: #d1d5db !important;
+        stroke-width: 1 !important;
+        opacity: 0.5 !important;
+      }
+      
+      .recharts-text {
+        fill: #374151 !important;
+        font-weight: 500 !important;
+        font-size: 12px !important;
+      }
+      
+      .recharts-tooltip-wrapper {
+        background: white !important;
+        border: 2px solid #3b82f6 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+      }
+      
+      .recharts-tooltip-content {
+        background: white !important;
+        border: none !important;
+        border-radius: 6px !important;
+        padding: 12px !important;
+      }
+      
+      .recharts-legend-wrapper {
+        padding: 10px 0 !important;
+      }
+      
+      .recharts-legend-item-text {
+        color: #374151 !important;
+        font-weight: 600 !important;
+      }
+      
+      /* Chart containers */
+      .recharts-responsive-container {
+        min-height: 280px !important;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+        padding: 10px;
+        margin: 5px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      }
+      
+      /* Ensure bars and lines are visible */
+      .recharts-bar {
+        opacity: 0.9 !important;
+      }
+      
+      .recharts-line {
+        stroke-width: 3 !important;
+        opacity: 0.9 !important;
+      }
+      
+      .recharts-area {
+        opacity: 0.7 !important;
+      }
+      
+      /* Force chart titles to be visible */
+      .card-header h3 {
+        color: #1f2937 !important;
+        font-weight: 700 !important;
+        font-size: 1.25rem !important;
+        margin-bottom: 0.75rem !important;
+        padding-bottom: 0.5rem !important;
+        border-bottom: 2px solid #3b82f6 !important;
+      }
+      
+      /* Chart loading animation */
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      @keyframes chartFadeIn {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      
+      .recharts-wrapper {
+        animation: chartFadeIn 0.5s ease-out !important;
+      }
+      
+      /* Ensure all text is dark and visible */
+      .card-content p, .card-content div {
+        color: #374151 !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+};
+
+// Inject styles when component loads
+if (typeof document !== 'undefined') {
+  injectAnalyticsCSS();
+}

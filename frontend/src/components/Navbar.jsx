@@ -39,14 +39,10 @@ const Navbar = () => {
               }} 
             />
             <h1 style={{ 
-              color: 'var(--text-primary)',
+              color: '#ffffff',
               margin: 0,
               fontSize: '1.5rem',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
+              fontWeight: '700'
             }}>
               InfraVision AI
             </h1>
