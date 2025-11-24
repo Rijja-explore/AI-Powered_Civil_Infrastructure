@@ -1,1 +1,14 @@
 /* Clean Tailwind CSS - No custom styles */
+
+/* Force InfraVision AI branding to be white */
+.brand h1 {
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+  font-weight: 700 !important;
+}
+
+/* Additional fallback for any h1 inside brand class */
+.brand > div > h1,
+.brand h1[style*="color"] {
+  color: #ffffff !important;
+}

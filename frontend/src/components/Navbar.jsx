@@ -39,10 +39,11 @@ const Navbar = () => {
               }} 
             />
             <h1 style={{ 
-              color: '#ffffff',
+              color: '#ffffff !important',
               margin: 0,
               fontSize: '1.5rem',
-              fontWeight: '700'
+              fontWeight: '700',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
             }}>
               InfraVision AI
             </h1>
