@@ -124,17 +124,8 @@ except Exception as e:
     ADVANCED_ANALYTICS_AVAILABLE = False
     print(f"⚠️ Advanced Data Analytics failed to load: {e}")
 
-# Import unified analysis engine (COMBINES all 3 data science modules + 3 NEW advanced image analysis)
-try:
-    from unified_analysis_engine import UnifiedDataScienceAnalyzer, AdvancedImageAnalyzer, create_unified_analysis_report
-    UNIFIED_ANALYSIS_AVAILABLE = True
-    print("✅ Unified Analysis Engine loaded successfully (9 outputs: 6 original + 3 advanced images)")
-except ImportError as e:
-    UNIFIED_ANALYSIS_AVAILABLE = False
-    print(f"⚠️ Unified Analysis Engine not available: {e}")
-except Exception as e:
-    UNIFIED_ANALYSIS_AVAILABLE = False
-    print(f"⚠️ Unified Analysis Engine failed to load: {e}")
+# Unified Analysis Engine disabled - keeping only 3 main pages
+UNIFIED_ANALYSIS_AVAILABLE = False
 
 app = Flask(__name__)
 CORS(app)
@@ -845,50 +836,17 @@ def analyze_image_comprehensive(image_np, px_to_cm_ratio=0.1, confidence_thresho
             }
         })
 
-        # ===== NEW: GENERATE 3 ADVANCED ANALYSIS IMAGES =====
-        print("🚀 Generating 3 advanced analysis images...")
-        
-        # Initialize Advanced Image Analyzer for new features
-        advanced_images = {}
-        if UNIFIED_ANALYSIS_AVAILABLE:
-            try:
-                image_analyzer = AdvancedImageAnalyzer()
-                
-                # Generate Moisture/Dampness Heatmap
-                moisture_heatmap = image_analyzer.create_moisture_heatmap(image_np)
-                advanced_images["moisture_dampness_heatmap"] = moisture_heatmap
-                print("✅ Moisture/Dampness Heatmap generated")
-                
-                # Generate Structural Stress Map
-                stress_map = image_analyzer.create_structural_stress_map(image_np, crack_details)
-                advanced_images["structural_stress_map"] = stress_map
-                print("✅ Structural Stress Map generated")
-                
-                # Generate Thermal/Infrared Simulation
-                thermal_simulation = image_analyzer.create_thermal_infrared_simulation(image_np)
-                advanced_images["thermal_infrared_simulation"] = thermal_simulation
-                print("✅ Thermal/Infrared Simulation generated")
-                
-            except Exception as e:
-                print(f"⚠️ Advanced image generation error: {e}")
-                advanced_images = {}
-        else:
-            print("⚠️ Unified Analysis Engine not available for advanced images")
-        
-        # Convert all images to base64 (6 original + 3 new = 9 total)
+        # Convert all images to base64 (6 original images only)
         output_images = {
             "original": image_to_base64(image_np),
             "crack_detection": image_to_base64(annotated_image),
             "biological_growth": image_to_base64(growth_image),
             "segmentation": image_to_base64(segmented_image),
             "depth_estimation": image_to_base64(depth_heatmap),
-            "edge_detection": image_to_base64(edges),
-            "moisture_dampness_heatmap": image_to_base64(advanced_images.get("moisture_dampness_heatmap", image_np)),
-            "structural_stress_map": image_to_base64(advanced_images.get("structural_stress_map", image_np)),
-            "thermal_infrared_simulation": image_to_base64(advanced_images.get("thermal_infrared_simulation", image_np))
+            "edge_detection": image_to_base64(edges)
         }
 
-        print("✅ All 9 images generated successfully (6 original + 3 advanced)")
+        print("✅ All 6 images generated successfully")
 
         return {
             "status": "success",
@@ -913,136 +871,7 @@ def analyze_image_comprehensive(image_np, px_to_cm_ratio=0.1, confidence_thresho
         return {"error": f"Comprehensive analysis failed: {str(e)}"}
 
 
-# ============================================
-# ADVANCED ANALYSIS IMAGE GENERATION FUNCTIONS
-# ============================================
 
-def generate_moisture_dampness_heatmap(image_np, segmented_image):
-    """
-    Generate Moisture/Dampness Heatmap
-    Blue → Dry, Green → Mild, Yellow → Damp, Red → Severe
-    Analyzes image properties to simulate moisture detection
-    """
-    try:
-        gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY) if len(image_np.shape) == 3 else image_np
-        h, w = gray.shape
-        
-        # Detect darker regions (potential moisture areas)
-        # Apply bilateral filter to smooth while preserving edges
-        filtered = cv2.bilateralFilter(gray, 9, 75, 75)
-        
-        # Create moisture score map (darker = more moisture)
-        # Normalize to 0-1 range
-        moisture_score = 1.0 - (filtered.astype(float) / 255.0)
-        
-        # Apply morphological operations to enhance moisture patterns
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-        moisture_enhanced = cv2.morphologyEx(moisture_score * 255, cv2.MORPH_CLOSE, kernel, iterations=2)
-        moisture_enhanced = moisture_enhanced.astype(np.uint8)
-        
-        # Add edge-based moisture accumulation
-        edges = cv2.Canny(gray, 100, 200)
-        moisture_final = cv2.addWeighted(moisture_enhanced, 0.8, edges, 0.2, 0)
-        
-        # Apply Gaussian blur for smooth heatmap
-        moisture_heatmap = cv2.GaussianBlur(moisture_final, (15, 15), 0)
-        
-        # Apply colormap: Blue (dry) → Green (mild) → Yellow (damp) → Red (severe)
-        moisture_heatmap_cv = cv2.applyColorMap(moisture_heatmap, cv2.COLORMAP_JET)
-        
-        # Invert colors so darker areas are blue (dry) and lighter are red (wet)
-        moisture_heatmap_cv = cv2.cvtColor(moisture_heatmap_cv, cv2.COLOR_BGR2RGB)
-        moisture_heatmap_cv = 255 - moisture_heatmap_cv  # Invert for intuitive mapping
-        
-        return moisture_heatmap_cv
-    except Exception as e:
-        print(f"⚠️ Error generating moisture heatmap: {e}")
-        return image_np
-
-
-def generate_structural_stress_map(image_np, annotated_image):
-    """
-    Generate Structural Stress Map (Pseudo-FEA)
-    Blue → Low stress, Yellow → Medium, Red → High stress
-    Uses crack locations and image gradients to estimate stress concentration
-    """
-    try:
-        gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY) if len(image_np.shape) == 3 else image_np
-        h, w = gray.shape
-        
-        # Calculate image gradients (areas of high change = high stress)
-        sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=5)
-        sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=5)
-        
-        # Calculate magnitude of gradients
-        gradient_mag = np.sqrt(sobelx**2 + sobely**2)
-        gradient_mag = (gradient_mag / np.max(gradient_mag) * 255).astype(np.uint8)
-        
-        # Enhance stress areas using morphological operations
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        stress_map = cv2.morphologyEx(gradient_mag, cv2.MORPH_CLOSE, kernel, iterations=1)
-        
-        # Apply Laplacian for stress concentration zones
-        laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-        laplacian = np.abs(laplacian).astype(np.uint8)
-        
-        # Combine gradient and Laplacian for comprehensive stress map
-        stress_combined = cv2.addWeighted(stress_map, 0.6, laplacian, 0.4, 0)
-        stress_combined = cv2.GaussianBlur(stress_combined, (11, 11), 0)
-        
-        # Apply colormap: Blue (low) → Yellow → Red (high)
-        stress_heatmap = cv2.applyColorMap(stress_combined, cv2.COLORMAP_RAINBOW)
-        stress_heatmap = cv2.cvtColor(stress_heatmap, cv2.COLOR_BGR2RGB)
-        
-        return stress_heatmap
-    except Exception as e:
-        print(f"⚠️ Error generating stress map: {e}")
-        return image_np
-
-
-def generate_thermal_infrared_simulation(image_np, depth_heatmap):
-    """
-    Generate Thermal/Infrared Simulation
-    Blue/Purple → Cool, Green → Normal, Yellow/Red → Hot zones
-    Uses image brightness and texture to simulate thermal patterns
-    """
-    try:
-        # Convert to HSV for better color analysis
-        if len(image_np.shape) == 3:
-            hsv = cv2.cvtColor(image_np, cv2.COLOR_BGR2HSV).astype(np.float32)
-            # Use brightness (V channel) as base
-            thermal_base = hsv[:, :, 2]
-        else:
-            thermal_base = image_np.astype(np.float32)
-        
-        # Normalize brightness
-        thermal_base = (thermal_base / 255.0 * 255).astype(np.uint8)
-        
-        # Add texture-based heat variation (rough areas = hot spots)
-        gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY) if len(image_np.shape) == 3 else image_np
-        
-        # Calculate local variance as proxy for rough/weak areas (hotter)
-        window_size = 21
-        mean = cv2.blur(gray.astype(np.float32), (window_size, window_size))
-        sqr = cv2.blur((gray.astype(np.float32))**2, (window_size, window_size))
-        variance = sqr - (mean**2)
-        variance = np.sqrt(np.abs(variance))
-        variance = (variance / np.max(variance) * 255).astype(np.uint8)
-        
-        # Combine brightness and variance for thermal effect
-        thermal_map = cv2.addWeighted(thermal_base, 0.5, variance, 0.5, 0)
-        
-        # Smooth for realistic thermal appearance
-        thermal_map = cv2.GaussianBlur(thermal_map, (13, 13), 0)
-        
-        # Apply thermal colormap: Cool (blue/purple) → Normal (green) → Hot (yellow/red)
-        thermal_heatmap = cv2.applyColorMap(thermal_map, cv2.COLORMAP_HOT)
-        thermal_heatmap = cv2.cvtColor(thermal_heatmap, cv2.COLOR_BGR2RGB)
-        
-        return thermal_heatmap
-    except Exception as e:
-        print(f"⚠️ Error generating thermal map: {e}")
-        return image_np
 
 
 @app.route('/', methods=['GET'])
